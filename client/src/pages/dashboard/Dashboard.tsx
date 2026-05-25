@@ -24,8 +24,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedBranch, setSelectedBranch] = useState<string>(''); // Default empty for Admin workspace prompt
-  const [selectedSections, setSelectedSections] = useState<string[]>([]); // Default empty
+  const [selectedBranch, setSelectedBranch] = useState<string>('All'); 
+  const [selectedSections, setSelectedSections] = useState<string[]>(['All']);
   const [allBranches, setAllBranches] = useState<string[]>([]);
   const [allSections, setAllSections] = useState<string[]>([]);
 
@@ -89,11 +89,7 @@ export default function Dashboard() {
   }, [role]);
 
   useEffect(() => {
-    if (role !== 'admin') {
-      loadData();
-    } else {
-      setLoading(false);
-    }
+    loadData();
   }, [role]);
 
   if (loading) {
@@ -269,115 +265,7 @@ export default function Dashboard() {
     );
   }
 
-  // --- STAFF DASHBOARDS (ADMIN, TEACHER, COUNSELOR) ---
-  if (role === 'admin' && !staffData) {
-    return (
-      <div className="space-y-8 animate-fade-in max-w-2xl mx-auto mt-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Admin Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Welcome back, <span className="font-semibold text-purple-600">{user?.username}</span>. Please configure your active academic workspace below to get started.
-          </p>
-        </div>
 
-        <div className="bg-white rounded-3xl p-8 border border-gray-150 shadow-md space-y-6">
-          <div className="flex items-center gap-4 border-b border-gray-100 pb-5">
-            <div className="bg-purple-100 p-3 rounded-2xl text-purple-600">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-gray-900 text-base">Dashboard Workspace Configuration</h3>
-              <p className="text-xs text-gray-400 font-medium">Select a branch and section(s) to pull and compile statistics</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Branch Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Academic Branch *</label>
-              <select
-                value={selectedBranch}
-                onChange={(e) => {
-                  setSelectedBranch(e.target.value);
-                  setSelectedSections([]); // Reset sections when branch changes
-                }}
-                className="w-full bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-semibold text-gray-700"
-              >
-                <option value="">-- Choose a Branch --</option>
-                <option value="All">All Branches (Global Campus)</option>
-                {allBranches.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sections Selector (Pills) */}
-            {selectedBranch && (
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Target Sections (Multi-Select)</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedSections.includes('All')) {
-                        setSelectedSections([]);
-                      } else {
-                        setSelectedSections(['All']);
-                      }
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-                      selectedSections.includes('All')
-                        ? 'bg-purple-600 border-purple-650 text-white shadow-sm'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    All Sections
-                  </button>
-                  {allSections.map(sec => {
-                    const isActive = selectedSections.includes(sec);
-                    const isAllActive = selectedSections.includes('All');
-                    return (
-                      <button
-                        key={sec}
-                        type="button"
-                        disabled={isAllActive}
-                        onClick={() => {
-                          if (isActive) {
-                            setSelectedSections(prev => prev.filter(s => s !== sec));
-                          } else {
-                            setSelectedSections(prev => [...prev, sec]);
-                          }
-                        }}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-                          isAllActive 
-                            ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed'
-                            : isActive
-                              ? 'bg-purple-600 border-purple-650 text-white shadow-sm'
-                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        Section {sec}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-[10px] text-gray-400 italic">Select one or multiple sections to refine your dashboard focus, or select 'All Sections'.</p>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            disabled={!selectedBranch || (selectedBranch !== 'All' && selectedSections.length === 0 && !selectedSections.includes('All'))}
-            onClick={() => loadData(selectedBranch, selectedSections)}
-            className="w-full flex items-center justify-center py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-100 disabled:text-gray-400 text-white rounded-2xl text-xs font-bold transition-all shadow-sm hover:shadow"
-          >
-            Analyze Workspace Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const totalStudents = staffData?.totalStudents ?? 0;
   const totalTeachers = staffData?.totalTeachers ?? 0;
@@ -398,7 +286,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {role === 'admin' && staffData && (
+          {role === 'admin' && (
             <div className="flex items-center gap-2">
               <button
                 onClick={downloadWatchlistPdf}
@@ -426,7 +314,7 @@ export default function Dashboard() {
       </div>
 
       {/* Admin Workspace Filter Bar */}
-      {role === 'admin' && staffData && (
+      {role === 'admin' && (
         <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Active Workspace:</span>

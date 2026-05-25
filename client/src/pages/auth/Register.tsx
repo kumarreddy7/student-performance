@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../features/auth/authStore';
 import api from '../../lib/axios';
@@ -31,35 +31,11 @@ export default function Register() {
   const [section, setSection] = useState('');
   const [branch, setBranch] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [counselorUsername, setCounselorUsername] = useState('');
+  const counselorUsername = '';
 
   // Auxiliary data and statuses
-  const [counselors, setCounselors] = useState<any[]>([]);
-  const [counselorsLoading, setCounselorsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-
-  // Fetch counselors list for students
-  useEffect(() => {
-    if (role === 'student') {
-      const fetchCounselors = async () => {
-        setCounselorsLoading(true);
-        try {
-          const res = await api.get('/auth/counselors');
-          const uniqueCounselors = (res.data || []).filter(
-            (c: any, index: number, self: any[]) =>
-              self.findIndex((t: any) => t.username === c.username) === index
-          );
-          setCounselors(uniqueCounselors);
-        } catch (err) {
-          console.error('Failed to fetch counselors roster', err);
-        } finally {
-          setCounselorsLoading(false);
-        }
-      };
-      fetchCounselors();
-    }
-  }, [role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,31 +292,7 @@ export default function Register() {
                   <option value="MECH">Mechanical</option>
                   <option value="CIVIL">Civil</option>
                 </select>
-              </div>
-
-              {/* Counselor Dropdown */}
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assigned Counselor</label>
-                {counselorsLoading ? (
-                  <div className="flex items-center justify-center py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl">
-                    <CircularProgress size={16} className="!text-purple-600 mr-2" />
-                    <span className="text-xs text-gray-500 font-semibold">Loading counselors list...</span>
-                  </div>
-                ) : (
-                  <select
-                    value={counselorUsername}
-                    onChange={(e) => setCounselorUsername(e.target.value)}
-                    className="appearance-none w-full bg-gray-50/50 px-4 py-2.5 border border-gray-250 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent text-sm text-gray-700"
-                  >
-                    <option value="">None / Unassigned</option>
-                    {counselors.map((c) => (
-                      <option key={c.id} value={c.username}>
-                        {c.username} ({c.email})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+                </div>
             </div>
           </div>
         )}
