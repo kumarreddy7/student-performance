@@ -5,7 +5,7 @@ import { useReportStore } from '../../features/reports/reportStore';
 import { StudentMarksChart, TopPerformersChart } from '../../components/PerformanceBarChart';
 import { 
   Users, GraduationCap, Calendar, FileSpreadsheet, Award, AlertTriangle, 
-  TrendingUp, ArrowRight, UserCheck, RefreshCw, FileText, UserCircle 
+  TrendingUp, ArrowRight, UserCheck, RefreshCw, FileText, UserCircle, Activity 
 } from 'lucide-react';
 import { CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +28,37 @@ export default function Dashboard() {
   const [selectedSections, setSelectedSections] = useState<string[]>(['All']);
   const [allBranches, setAllBranches] = useState<string[]>([]);
   const [allSections, setAllSections] = useState<string[]>([]);
+
+  // Live Pulse Ticker Feed State
+  const [tickerItems, setTickerItems] = useState<any[]>([
+    { id: 1, text: 'Consolidated attendance rate for ECE Branch - Sec A', time: 'Just now', type: 'system' },
+    { id: 2, text: 'counselor Varsha confirmed a review slot for ECE-108', time: '1 min ago', type: 'counselor' },
+    { id: 3, text: 'Marks database processed successfully', time: '5 mins ago', type: 'csv' },
+    { id: 4, text: 'Student Deepa flagged under Counseling Watchlist (Medium Risk)', time: '12 mins ago', type: 'analytics' },
+    { id: 5, text: 'New student account registered for roll CSE-049', time: '20 mins ago', type: 'auth' }
+  ]);
+
+  useEffect(() => {
+    const eventPool = [
+      { text: 'counselor Varsha scheduled a review meeting with CSE Batch A', type: 'counselor' },
+      { text: 'Consolidated attendance calculations completed for MECH Branch', type: 'system' },
+      { text: 'Student Karthik updated attendance records to 78.4%', type: 'student' },
+      { text: 'counselor Ravi logged a batch counseling intervention note', type: 'counselor' },
+      { text: 'Workspace visualizer environment compiled for Teacher workspace', type: 'system' },
+      { text: 'Analytical risk index reassessed for Student Sneha (Low Risk)', type: 'analytics' },
+      { text: 'counselor Varsha accepted slot for Student Anjali (Tuesday 10:00 AM)', type: 'counselor' }
+    ];
+
+    const interval = setInterval(() => {
+      const randomEvent = eventPool[Math.floor(Math.random() * eventPool.length)];
+      setTickerItems(prev => [
+        { id: Date.now(), text: randomEvent.text, time: 'Just now', type: randomEvent.type },
+        ...prev.slice(0, 4)
+      ]);
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const role = normalizeRole(user?.role);
 
@@ -611,6 +642,38 @@ export default function Dashboard() {
 
         {/* Right Area: Top Performers & Recent CSV upload details */}
         <div className="space-y-6">
+          
+          {/* Live Counseling Activity Stream */}
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-full blur-2xl -z-10 opacity-60"></div>
+            <h2 className="font-bold text-gray-900 text-base flex items-center gap-2 mb-4">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+              </span>
+              Academic Pulse (Live Feed)
+            </h2>
+
+            <div className="space-y-3 max-h-[290px] overflow-hidden">
+              {tickerItems.map((item) => (
+                <div 
+                  key={item.id} 
+                  className="p-3 bg-gray-50/40 hover:bg-purple-50/20 border border-gray-100 rounded-2xl flex gap-3 text-xs transition-all duration-300 animate-slide-in"
+                >
+                  <div className={`h-7 w-7 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5
+                    ${item.type === 'counselor' ? 'bg-purple-50 text-purple-600 border border-purple-100/50' :
+                      item.type === 'csv' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100/50' :
+                      item.type === 'analytics' ? 'bg-rose-50 text-rose-600 border border-rose-100/50' : 'bg-gray-100 text-gray-550'}`}>
+                    <Activity className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-gray-800 leading-relaxed text-[11px]">{item.text}</p>
+                    <span className="text-[9px] text-gray-400 font-semibold block mt-1">{item.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           
           {/* Top Performers Table Card */}
           <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">

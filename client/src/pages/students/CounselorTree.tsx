@@ -250,6 +250,17 @@ export default function CounselorTree() {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto px-4">
+      <style>{`
+        @keyframes figmaDash {
+          to {
+            stroke-dashoffset: -20;
+          }
+        }
+        .marching-ants-line {
+          stroke-dasharray: 6, 4;
+          animation: figmaDash 1.2s linear infinite;
+        }
+      `}</style>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -370,7 +381,17 @@ export default function CounselorTree() {
             <div className="h-16 w-0.5 bg-purple-200 absolute -bottom-16"></div>
           </div>
 
-          <div className="space-y-8 max-w-4xl mx-auto relative pl-8 border-l-2 border-purple-200/60">
+          <div className="space-y-8 max-w-4xl mx-auto relative pl-8">
+            <div className="absolute left-[7px] top-2 bottom-2 w-[2px] pointer-events-none">
+              <svg className="h-full w-full" preserveAspectRatio="none">
+                <line 
+                  x1="0" y1="0" x2="0" y2="100%" 
+                  stroke="#c084fc" 
+                  strokeWidth="2" 
+                  className="marching-ants-line"
+                />
+              </svg>
+            </div>
 
             {/* ======================================================== */}
             {/* RENDER VIEW 1: ADMIN & TEACHER (FULL ALLOCATION MAP)   */}
@@ -427,7 +448,17 @@ export default function CounselorTree() {
                       </div>
 
                       {expandedCounselors['unassigned'] && (
-                        <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 border-l-2 border-amber-100 space-y-3">
+                        <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 space-y-3 relative">
+                          <div className="absolute left-[7px] top-4 bottom-4 w-[2px] pointer-events-none">
+                            <svg className="h-full w-full" preserveAspectRatio="none">
+                              <line 
+                                x1="0" y1="0" x2="0" y2="100%" 
+                                stroke="#fbbf24" 
+                                strokeWidth="2" 
+                                className="marching-ants-line"
+                              />
+                            </svg>
+                          </div>
                           {unassignedStudents.map((student) => {
                             const isFocused = `student-${student.id}` === focusedNodeId;
                             return (
@@ -546,7 +577,17 @@ export default function CounselorTree() {
 
                         {/* Level 2 Nodes (Batches) */}
                         {isExpanded && (
-                          <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 border-l-2 border-indigo-100 space-y-4">
+                          <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 space-y-4 relative">
+                            <div className="absolute left-[7px] top-4 bottom-4 w-[2px] pointer-events-none">
+                              <svg className="h-full w-full" preserveAspectRatio="none">
+                                <line 
+                                  x1="0" y1="0" x2="0" y2="100%" 
+                                  stroke="#818cf8" 
+                                  strokeWidth="2" 
+                                  className="marching-ants-line"
+                                />
+                              </svg>
+                            </div>
                             {batches.length === 0 ? (
                               <p className="text-xs text-gray-400 italic">No assigned batches or student records found.</p>
                             ) : (
@@ -585,7 +626,17 @@ export default function CounselorTree() {
 
                                     {/* Level 3 Nodes (Students) */}
                                     {batchExpanded && (
-                                      <div className="mt-3 pl-6 border-l-2 border-dashed border-indigo-100 space-y-2">
+                                      <div className="mt-3 pl-6 space-y-2 relative">
+                                        <div className="absolute left-[7px] top-2 bottom-2 w-[2px] pointer-events-none">
+                                          <svg className="h-full w-full" preserveAspectRatio="none">
+                                            <line 
+                                              x1="0" y1="0" x2="0" y2="100%" 
+                                              stroke="#a78bfa" 
+                                              strokeWidth="2" 
+                                              className="marching-ants-line"
+                                            />
+                                          </svg>
+                                        </div>
                                         {students.map(s => {
                                           const isFocused = `student-${s.id}` === focusedNodeId;
                                           return (
@@ -718,7 +769,17 @@ export default function CounselorTree() {
 
                           {/* Level 2 Nodes (Students) */}
                           {batchExpanded && (
-                            <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 border-l-2 border-indigo-100 space-y-2">
+                            <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 space-y-2 relative">
+                              <div className="absolute left-[7px] top-4 bottom-4 w-[2px] pointer-events-none">
+                                <svg className="h-full w-full" preserveAspectRatio="none">
+                                  <line 
+                                    x1="0" y1="0" x2="0" y2="100%" 
+                                    stroke="#818cf8" 
+                                    strokeWidth="2" 
+                                    className="marching-ants-line"
+                                  />
+                                </svg>
+                              </div>
                               {students.map(s => {
                                 const isFocused = `student-${s.id}` === focusedNodeId;
                                 return (
@@ -836,7 +897,17 @@ export default function CounselorTree() {
                       </div>
 
                       {/* Batch Link Node */}
-                      <div className="pl-6 border-l-2 border-indigo-100 space-y-4">
+                      <div className="pl-6 space-y-4 relative">
+                        <div className="absolute left-[7px] top-2 bottom-2 w-[2px] pointer-events-none">
+                          <svg className="h-full w-full" preserveAspectRatio="none">
+                            <line 
+                              x1="0" y1="0" x2="0" y2="100%" 
+                              stroke="#818cf8" 
+                              strokeWidth="2" 
+                              className="marching-ants-line"
+                            />
+                          </svg>
+                        </div>
                         <div className="relative group/batch">
                           <div className="absolute -left-[31px] top-5.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-500 z-10"></div>
                           <div className="bg-indigo-50/15 border border-indigo-100/50 p-4 rounded-2xl">
@@ -863,7 +934,17 @@ export default function CounselorTree() {
                           </div>
 
                           {/* Student Node */}
-                          <div className="mt-4 pl-6 border-l-2 border-dashed border-indigo-100">
+                          <div className="mt-4 pl-6 space-y-3 relative">
+                            <div className="absolute left-[7px] top-2 bottom-2 w-[2px] pointer-events-none">
+                              <svg className="h-full w-full" preserveAspectRatio="none">
+                                <line 
+                                  x1="0" y1="0" x2="0" y2="100%" 
+                                  stroke="#c084fc" 
+                                  strokeWidth="2" 
+                                  className="marching-ants-line"
+                                />
+                              </svg>
+                            </div>
                             <div className="group/student relative flex items-center justify-between p-4 bg-purple-50/10 hover:bg-purple-50/30 border border-purple-100 hover:border-purple-200 rounded-2xl group transition-all cursor-default">
                               <div className="absolute -left-[31px] top-6.5 h-2 w-2 rounded-full border border-white bg-purple-650 z-10 animate-pulse"></div>
                               <div>
