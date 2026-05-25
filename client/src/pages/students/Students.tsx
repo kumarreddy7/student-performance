@@ -53,18 +53,6 @@ export default function Students() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
 
-  // Tree Graph interactive states
-  const [assignmentsViewMode, setAssignmentsViewMode] = useState<'cards' | 'tree'>('tree');
-  const [expandedCounselors, setExpandedCounselors] = useState<Record<string, boolean>>({});
-  const [expandedBatches, setExpandedBatches] = useState<Record<string, boolean>>({});
-
-  const toggleCounselorNode = (username: string) => {
-    setExpandedCounselors(prev => ({ ...prev, [username]: !prev[username] }));
-  };
-
-  const toggleBatchNode = (batchId: string) => {
-    setExpandedBatches(prev => ({ ...prev, [batchId]: !prev[batchId] }));
-  };
 
   // Pagination & Server-side filtering state
   const [pagedStudents, setPagedStudents] = useState<any[]>([]);
@@ -169,35 +157,6 @@ export default function Students() {
     return allStudents.filter(s => !s.counselorUsername && s.status !== 'Deleted');
   }, [allStudents]);
 
-  const counselorTreeData = useMemo(() => {
-    return counselors.map(counselor => {
-      const assignedStudents = allStudents.filter(s => s.counselorUsername === counselor.username && s.status !== 'Deleted');
-      
-      // Group by batch
-      const batchesMap: Record<string, any[]> = {};
-      assignedStudents.forEach(student => {
-        const classNameStr = student.className || 'Unknown Year';
-        const branchStr = student.branch || 'General';
-        const sectionStr = student.section || 'A';
-        const batchKey = `${classNameStr} - ${branchStr} - Sec ${sectionStr}`;
-        if (!batchesMap[batchKey]) {
-          batchesMap[batchKey] = [];
-        }
-        batchesMap[batchKey].push(student);
-      });
-
-      const batches = Object.keys(batchesMap).map(batchKey => ({
-        batchKey,
-        students: batchesMap[batchKey]
-      }));
-
-      return {
-        counselor,
-        batches,
-        totalStudents: assignedStudents.length
-      };
-    });
-  }, [counselors, allStudents]);
 
   const loadPagedStudents = async () => {
     try {
@@ -434,95 +393,113 @@ export default function Students() {
               </div>
             )}
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center justify-between bg-white border border-gray-150 p-4 rounded-3xl shadow-sm">
-              <div>
-                <h3 className="font-bold text-gray-900 text-sm">Roster View Mode</h3>
-                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Toggle Roster Presentation</p>
-              </div>
-              <div className="flex bg-gray-100/80 p-1 rounded-xl">
-                <button
-                  onClick={() => setAssignmentsViewMode('tree')}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    assignmentsViewMode === 'tree'
-                      ? 'bg-white text-purple-650 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  Interactive Tree Graph
-                </button>
-                <button
-                  onClick={() => setAssignmentsViewMode('cards')}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    assignmentsViewMode === 'cards'
-                      ? 'bg-white text-purple-650 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  Roster Cards
-                </button>
-              </div>
-            </div>
-
-            {assignmentsViewMode === 'tree' ? (
-              /* INTERACTIVE TREE GRAPH VIEW */
-              <div className="space-y-8 bg-gray-50/30 border border-gray-150 p-8 rounded-3xl shadow-inner">
-                {/* Central Root Hub */}
-                <div className="flex flex-col items-center mb-10 relative">
-                  <div className="bg-purple-900 text-white border border-purple-800 shadow-md px-6 py-3.5 rounded-3xl text-center max-w-sm relative z-10 transition-transform hover:scale-102">
-                    <div className="bg-purple-800 p-2 rounded-xl text-purple-300 w-fit mx-auto mb-1.5">
+            {/* CLASSIC ROSTER CARDS VIEW */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Unassigned Students Card */}
+              <div className="bg-white shadow-sm rounded-3xl border border-dashed border-purple-200 overflow-hidden flex flex-col hover:shadow-md hover:border-purple-300 transition-all duration-200">
+                <div className="bg-purple-50/50 px-6 py-5 border-b border-purple-100/50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-purple-100 p-2 rounded-xl text-purple-650">
                       <UsersIcon className="h-5 w-5" />
                     </div>
-                    <h4 className="font-extrabold text-xs tracking-wider uppercase">Academic Institution Roster</h4>
-                    <p className="text-[9px] text-purple-200 mt-0.5 uppercase tracking-widest font-bold">Central Allocation Tree Map</p>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">Unassigned Students</h3>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Allocation Required</p>
+                    </div>
                   </div>
-                  {/* Central vertical link line */}
-                  <div className="h-10 w-0.5 bg-purple-200 absolute -bottom-10"></div>
+                  <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                    {unassignedStudents.length} Left
+                  </span>
                 </div>
+                <div className="p-6 flex-1 flex flex-col min-h-[200px]">
+                  {unassignedStudents.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-10">
+                      <Plus className="h-8 w-8 text-green-450 mb-2 rotate-45" />
+                      <p className="font-bold text-gray-700 text-xs">All Assignment Complete</p>
+                      <p className="text-[10px] text-gray-400 mt-1">Every active student has an advisor.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {unassignedStudents.map((student) => (
+                        <div
+                          key={student.id}
+                          onClick={() => navigate(`/students/${student.id}`)}
+                          className="flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/40 border border-gray-100 hover:border-purple-100 rounded-2xl cursor-pointer transition-all duration-150 group"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-bold text-xs text-gray-900 group-hover:text-purple-650 truncate">
+                              {student.firstName} {student.lastName}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Roll: {student.rollNumber} • {student.className}</p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
-                <div className="space-y-6 max-w-4xl mx-auto relative pl-8 border-l-2 border-purple-200/60">
-                  {/* Unassigned Students Node */}
-                  <div className="relative">
-                    {/* Connector Dot */}
-                    <div className="absolute -left-[39px] top-6 h-4 w-4 rounded-full border-4 border-white bg-purple-400 shadow-sm z-10"></div>
-                    
-                    <div className="bg-white shadow-sm rounded-3xl p-5 border border-dashed border-purple-200">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Counselor Cards */}
+              {[...counselors]
+                .sort((a, b) => {
+                  if (a.username === user?.username) return -1;
+                  if (b.username === user?.username) return 1;
+                  return a.username.localeCompare(b.username);
+                })
+                .map((counselor) => {
+                  const assigned = allStudents.filter(s => s.counselorUsername === counselor.username && s.status !== 'Deleted');
+                  const isSelf = counselor.username === user?.username;
+                  return (
+                    <div 
+                      key={counselor.id} 
+                      className={`bg-white shadow-sm rounded-3xl overflow-hidden flex flex-col hover:shadow-md transition-all duration-200 ${
+                        isSelf ? 'border-2 border-purple-500 shadow-purple-100/30' : 'border border-gray-100'
+                      }`}
+                    >
+                      <div className={`px-6 py-5 border-b flex items-center justify-between ${
+                        isSelf ? 'bg-purple-50/30 border-purple-100' : 'bg-gray-50/50 border-gray-100'
+                      }`}>
                         <div className="flex items-center gap-3">
-                          <div className="bg-purple-100 p-2.5 rounded-xl text-purple-650">
-                            <UsersIcon className="h-5 w-5" />
+                          <div className={`p-2 rounded-xl ${isSelf ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-650'}`}>
+                            <User className="h-5 w-5" />
                           </div>
-                          <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Unassigned Students</h4>
-                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Requires Counselor Allocation</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-gray-900 text-sm capitalize flex items-center gap-1.5 truncate">
+                              {counselor.username}
+                              {isSelf && (
+                                <span className="bg-purple-100 text-purple-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md">
+                                  My Roster
+                                </span>
+                              )}
+                            </h3>
+                            <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-400 font-medium">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate max-w-[130px]">{counselor.email}</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                            {unassignedStudents.length} Remaining
-                          </span>
-                          <Button
-                            variant="outlined"
-                            onClick={() => toggleCounselorNode('unassigned')}
-                            className="!rounded-xl !capitalize !text-xs !font-bold !px-3 !py-1.5 !border-gray-200 !text-gray-700 hover:!bg-gray-50"
-                          >
-                            {expandedCounselors['unassigned'] ? 'Hide Students' : 'Show Students'}
-                          </Button>
-                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                          isSelf ? 'bg-purple-100 text-purple-700' : 'bg-indigo-50 text-indigo-700 border border-indigo-100/50'
+                        }`}>
+                          {assigned.length} Active
+                        </span>
                       </div>
-
-                      {expandedCounselors['unassigned'] && (
-                        <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 border-l-2 border-purple-100 space-y-2">
-                          {unassignedStudents.length === 0 ? (
-                            <p className="text-xs text-gray-400 italic">All active student accounts have been allocated successfully.</p>
-                          ) : (
-                            unassignedStudents.map((student) => (
+                      <div className="p-6 flex-1 flex flex-col min-h-[200px]">
+                        {assigned.length === 0 ? (
+                          <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-10">
+                            <UsersIcon className="h-8 w-8 text-gray-300 mb-2" />
+                            <p className="font-bold text-gray-700 text-xs">No allocations yet</p>
+                            <p className="text-[10px] text-gray-400 mt-1">Assign students on their profile page.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                            {assigned.map((student) => (
                               <div
                                 key={student.id}
                                 onClick={() => navigate(`/students/${student.id}`)}
-                                className="relative flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/30 border border-gray-100 hover:border-purple-100 rounded-2xl cursor-pointer transition-all duration-150 group"
+                                className="flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/40 border border-gray-100 hover:border-purple-100 rounded-2xl cursor-pointer transition-all duration-150 group"
                               >
-                                <div className="absolute -left-[31px] top-5 h-2 w-2 rounded-full border border-white bg-purple-400 shadow-sm z-10"></div>
                                 <div className="min-w-0">
                                   <p className="font-bold text-xs text-gray-900 group-hover:text-purple-650 truncate">
                                     {student.firstName} {student.lastName}
@@ -531,249 +508,14 @@ export default function Students() {
                                 </div>
                                 <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
                               </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Counselor Tree Nodes */}
-                  {counselorTreeData.map(({ counselor, batches, totalStudents }) => {
-                    const isSelf = counselor.username === user?.username;
-                    const isExpanded = expandedCounselors[counselor.username];
-                    
-                    return (
-                      <div key={counselor.id} className="relative">
-                        {/* Connector Dot */}
-                        <div className={`absolute -left-[39px] top-6 h-4 w-4 rounded-full border-4 border-white shadow-sm z-10 ${
-                          isSelf ? 'bg-purple-600' : 'bg-indigo-500'
-                        }`}></div>
-                        
-                        <div className={`bg-white shadow-sm rounded-3xl p-5 border transition-all duration-200 hover:shadow-md ${
-                          isSelf ? 'border-purple-500 ring-2 ring-purple-100/30' : 'border-gray-150'
-                        }`}>
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2.5 rounded-xl ${isSelf ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-650'}`}>
-                                <User className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-gray-900 text-sm capitalize flex items-center gap-1.5">
-                                  {counselor.username}
-                                  {isSelf && (
-                                    <span className="bg-purple-100 text-purple-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md">
-                                      My Roster
-                                    </span>
-                                  )}
-                                </h4>
-                                <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1 mt-0.5">
-                                  <Mail className="h-3 w-3" /> {counselor.email}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <span className="bg-indigo-50 text-indigo-700 border border-indigo-100/50 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                                {totalStudents} Students ({batches.length} {batches.length === 1 ? 'Batch' : 'Batches'})
-                              </span>
-                              <Button
-                                variant="outlined"
-                                onClick={() => toggleCounselorNode(counselor.username)}
-                                className="!rounded-xl !capitalize !text-xs !font-bold !px-3 !py-1.5 !border-gray-200 !text-gray-700 hover:!bg-gray-50"
-                              >
-                                {isExpanded ? 'Collapse Batches' : 'Expand Batches'}
-                              </Button>
-                            </div>
+                            ))}
                           </div>
-
-                          {/* Level 2 Nodes (Batches under Counselor) */}
-                          {isExpanded && (
-                            <div className="mt-5 pt-4 border-t border-dashed border-gray-100 pl-6 border-l-2 border-indigo-100 space-y-4">
-                              {batches.length === 0 ? (
-                                <p className="text-xs text-gray-450 italic">No batches or student allocations registered yet.</p>
-                              ) : (
-                                batches.map(({ batchKey, students }) => {
-                                  const batchExpanded = expandedBatches[`${counselor.username}-${batchKey}`];
-                                  return (
-                                    <div key={batchKey} className="relative">
-                                      {/* Connector Dot */}
-                                      <div className="absolute -left-[31px] top-3.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-500 shadow-sm z-10"></div>
-                                      
-                                      {/* Batch Header */}
-                                      <div className="flex items-center justify-between bg-indigo-50/20 border border-indigo-100/50 px-4 py-2.5 rounded-2xl">
-                                        <div className="min-w-0">
-                                          <span className="block text-xs font-extrabold text-indigo-950 truncate">{batchKey}</span>
-                                          <span className="block text-[9px] text-gray-400 font-semibold uppercase tracking-wider mt-0.5">{students.length} Allocated Students</span>
-                                        </div>
-                                        <Button
-                                          variant="text"
-                                          onClick={() => toggleBatchNode(`${counselor.username}-${batchKey}`)}
-                                          className="!text-[10px] !font-black !text-indigo-650 hover:!bg-indigo-50/50 !capitalize !py-1 !px-2.5 !rounded-lg"
-                                        >
-                                          {batchExpanded ? 'Hide Students' : 'Show Students'}
-                                        </Button>
-                                      </div>
-
-                                      {/* Level 3 Nodes (Students under Batch) */}
-                                      {batchExpanded && (
-                                        <div className="mt-3 pl-6 border-l-2 border-dashed border-indigo-100 space-y-2">
-                                          {students.map(student => (
-                                            <div
-                                              key={student.id}
-                                              onClick={() => navigate(`/students/${student.id}`)}
-                                              className="relative flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/30 border border-gray-100 hover:border-purple-100 rounded-xl cursor-pointer transition-all duration-150 group"
-                                            >
-                                              {/* Connector Dot */}
-                                              <div className="absolute -left-[31px] top-5 h-2 w-2 rounded-full border border-white bg-purple-500 shadow-sm z-10"></div>
-                                              <div className="min-w-0">
-                                                <p className="font-bold text-xs text-gray-900 group-hover:text-purple-650 truncate">
-                                                  {student.firstName} {student.lastName}
-                                                </p>
-                                                <p className="text-[10px] text-gray-400 font-semibold mt-0.5 uppercase tracking-wider">Roll: {student.rollNumber}</p>
-                                              </div>
-                                              <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              /* CLASSIC ROSTER CARDS VIEW */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Unassigned Students Card */}
-                <div className="bg-white shadow-sm rounded-3xl border border-dashed border-purple-200 overflow-hidden flex flex-col hover:shadow-md hover:border-purple-300 transition-all duration-200">
-                  <div className="bg-purple-50/50 px-6 py-5 border-b border-purple-100/50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-purple-100 p-2 rounded-xl text-purple-650">
-                        <UsersIcon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 text-sm">Unassigned Students</h3>
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Allocation Required</p>
+                        )}
                       </div>
                     </div>
-                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                      {unassignedStudents.length} Left
-                    </span>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col min-h-[200px]">
-                    {unassignedStudents.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-10">
-                        <Plus className="h-8 w-8 text-green-450 mb-2 rotate-45" />
-                        <p className="font-bold text-gray-700 text-xs">All Assignment Complete</p>
-                        <p className="text-[10px] text-gray-400 mt-1">Every active student has an advisor.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                        {unassignedStudents.map((student) => (
-                          <div
-                            key={student.id}
-                            onClick={() => navigate(`/students/${student.id}`)}
-                            className="flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/40 border border-gray-100 hover:border-purple-100 rounded-2xl cursor-pointer transition-all duration-150 group"
-                          >
-                            <div className="min-w-0">
-                              <p className="font-bold text-xs text-gray-900 group-hover:text-purple-650 truncate">
-                                {student.firstName} {student.lastName}
-                              </p>
-                              <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Roll: {student.rollNumber} • {student.className}</p>
-                            </div>
-                            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Counselor Cards */}
-                {[...counselors]
-                  .sort((a, b) => {
-                    if (a.username === user?.username) return -1;
-                    if (b.username === user?.username) return 1;
-                    return a.username.localeCompare(b.username);
-                  })
-                  .map((counselor) => {
-                    const assigned = allStudents.filter(s => s.counselorUsername === counselor.username && s.status !== 'Deleted');
-                    const isSelf = counselor.username === user?.username;
-                    return (
-                      <div 
-                        key={counselor.id} 
-                        className={`bg-white shadow-sm rounded-3xl overflow-hidden flex flex-col hover:shadow-md transition-all duration-200 ${
-                          isSelf ? 'border-2 border-purple-500 shadow-purple-100/30' : 'border border-gray-100'
-                        }`}
-                      >
-                        <div className={`px-6 py-5 border-b flex items-center justify-between ${
-                          isSelf ? 'bg-purple-50/30 border-purple-100' : 'bg-gray-50/50 border-gray-100'
-                        }`}>
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${isSelf ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-650'}`}>
-                              <User className="h-5 w-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <h3 className="font-bold text-gray-900 text-sm capitalize flex items-center gap-1.5 truncate">
-                                {counselor.username}
-                                {isSelf && (
-                                  <span className="bg-purple-100 text-purple-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md">
-                                    My Roster
-                                  </span>
-                                )}
-                              </h3>
-                              <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-400 font-medium">
-                                <Mail className="h-3 w-3" />
-                                <span className="truncate max-w-[130px]">{counselor.email}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                            isSelf ? 'bg-purple-100 text-purple-700' : 'bg-indigo-50 text-indigo-700 border border-indigo-100/50'
-                          }`}>
-                            {assigned.length} Active
-                          </span>
-                        </div>
-                        <div className="p-6 flex-1 flex flex-col min-h-[200px]">
-                          {assigned.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-10">
-                              <UsersIcon className="h-8 w-8 text-gray-300 mb-2" />
-                              <p className="font-bold text-gray-700 text-xs">No allocations yet</p>
-                              <p className="text-[10px] text-gray-400 mt-1">Assign students on their profile page.</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                              {assigned.map((student) => (
-                                <div
-                                  key={student.id}
-                                  onClick={() => navigate(`/students/${student.id}`)}
-                                  className="flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/40 border border-gray-100 hover:border-purple-100 rounded-2xl cursor-pointer transition-all duration-150 group"
-                                >
-                                  <div className="min-w-0">
-                                    <p className="font-bold text-xs text-gray-900 group-hover:text-purple-650 truncate">
-                                      {student.firstName} {student.lastName}
-                                    </p>
-                                    <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Roll: {student.rollNumber} • {student.className}</p>
-                                  </div>
-                                  <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
+                  );
+                })}
+            </div>
 
             {/* Global Counseling Sessions Log (Admin/Teacher only) */}
             {(user?.role === 'admin' || user?.role === 'teacher') && (
