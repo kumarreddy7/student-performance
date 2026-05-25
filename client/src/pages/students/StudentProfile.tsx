@@ -143,7 +143,7 @@ export default function StudentProfile() {
     try {
       await api.patch(`/students/${id}/counselor?counselorUsername=${encodeURIComponent(selectedCounselor)}`);
       await fetchStudentAnalytics();
-      setToastMsg('Counselor allocated successfully!');
+      setToastMsg(selectedCounselor ? 'Counselor allocated successfully!' : 'Counselor unallocated successfully!');
     } catch (err: any) {
       console.error('Failed to allocate counselor', err);
       setToastMsg(err.response?.data?.message || 'Failed to allocate counselor.');

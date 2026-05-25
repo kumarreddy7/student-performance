@@ -411,7 +411,7 @@ export default function CounselorTree() {
                       </div>
 
                       {/* FIGMA WORKSPACE HOVER INSPECTOR BOX */}
-                      <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:scale-105 z-50 space-y-3">
+                      <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:scale-105 z-50 space-y-3">
                         <div className="flex items-center gap-1.5 border-b border-gray-800 pb-2">
                           <Users className="h-4 w-4 text-amber-400" />
                           <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Unassigned Group Inspect</span>
@@ -458,7 +458,7 @@ export default function CounselorTree() {
                                 </Button>
 
                                 {/* FIGMA STUDENT INSPECTOR HOVER BOX */}
-                                <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
+                                <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
                                   <div className="flex items-center justify-between border-b border-gray-800 pb-2.5">
                                     <div className="flex items-center gap-1.5">
                                       <User className="h-4 w-4 text-purple-400" />
@@ -528,7 +528,7 @@ export default function CounselorTree() {
                         </div>
 
                         {/* FIGMA COUNSELOR INSPECTOR HOVER BOX */}
-                        <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:scale-105 z-50 space-y-3">
+                        <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:scale-105 z-50 space-y-3">
                           <div className="flex items-center gap-1.5 border-b border-gray-800 pb-2.5">
                             <User className="h-4 w-4 text-indigo-400" />
                             <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Counselor Node Inspect</span>
@@ -571,7 +571,7 @@ export default function CounselorTree() {
                                     </div>
 
                                     {/* FIGMA BATCH INSPECTOR HOVER BOX */}
-                                    <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/batch:pointer-events-auto group-hover/batch:opacity-100 group-hover/batch:scale-105 z-50 space-y-3">
+                                    <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/batch:pointer-events-auto group-hover/batch:opacity-100 group-hover/batch:scale-105 z-50 space-y-3">
                                       <div className="flex items-center gap-1.5 border-b border-gray-800 pb-2.5">
                                         <BookOpen className="h-4 w-4 text-indigo-400" />
                                         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Batch Inspect</span>
@@ -616,7 +616,7 @@ export default function CounselorTree() {
                                               </Button>
 
                                               {/* FIGMA STUDENT INSPECTOR HOVER BOX */}
-                                              <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
+                                              <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
                                                 <div className="flex items-center justify-between border-b border-gray-800 pb-2.5">
                                                   <div className="flex items-center gap-1.5">
                                                     <User className="h-4 w-4 text-purple-400" />
@@ -704,7 +704,7 @@ export default function CounselorTree() {
                           </div>
 
                           {/* FIGMA BATCH INSPECTOR HOVER BOX */}
-                          <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/batch:pointer-events-auto group-hover/batch:opacity-100 group-hover/batch:scale-105 z-50 space-y-3">
+                          <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/batch:pointer-events-auto group-hover/batch:opacity-100 group-hover/batch:scale-105 z-50 space-y-3">
                             <div className="flex items-center gap-1.5 border-b border-gray-800 pb-2.5">
                               <BookOpen className="h-4 w-4 text-indigo-400" />
                               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Batch Inspect</span>
@@ -749,7 +749,7 @@ export default function CounselorTree() {
                                     </Button>
 
                                     {/* FIGMA STUDENT INSPECTOR HOVER BOX */}
-                                    <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
+                                    <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
                                       <div className="flex items-center justify-between border-b border-gray-800 pb-2.5">
                                         <div className="flex items-center gap-1.5">
                                           <User className="h-4 w-4 text-purple-400" />
@@ -823,7 +823,7 @@ export default function CounselorTree() {
                       </div>
 
                       {/* FIGMA COUNSELOR INSPECTOR HOVER BOX */}
-                      <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/counselor:pointer-events-auto group-hover/counselor:opacity-100 group-hover/counselor:scale-105 z-50 space-y-3">
+                      <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/counselor:pointer-events-auto group-hover/counselor:opacity-100 group-hover/counselor:scale-105 z-50 space-y-3">
                         <div className="flex items-center gap-1.5 border-b border-gray-800 pb-2.5">
                           <User className="h-4 w-4 text-indigo-400" />
                           <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Advisor Desk Inspect</span>
@@ -849,7 +849,7 @@ export default function CounselorTree() {
                           </div>
 
                           {/* FIGMA BATCH INSPECTOR HOVER BOX */}
-                          <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/batch:pointer-events-auto group-hover/batch:opacity-100 group-hover/batch:scale-105 z-50 space-y-3">
+                          <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/batch:pointer-events-auto group-hover/batch:opacity-100 group-hover/batch:scale-105 z-50 space-y-3">
                             <div className="flex items-center gap-1.5 border-b border-gray-800 pb-2.5">
                               <BookOpen className="h-4 w-4 text-indigo-400" />
                               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">My Batch Inspect</span>
@@ -877,7 +877,7 @@ export default function CounselorTree() {
                               </span>
 
                               {/* FIGMA STUDENT INSPECTOR HOVER BOX */}
-                              <div className="absolute top-[102%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
+                              <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700/80 rounded-2xl p-5 text-left shadow-2xl pointer-events-none opacity-0 scale-95 transition-all duration-300 group-hover/student:pointer-events-auto group-hover/student:opacity-100 group-hover/student:scale-105 z-50 space-y-3">
                                 <div className="flex items-center justify-between border-b border-gray-800 pb-2.5">
                                   <div className="flex items-center gap-1.5">
                                     <User className="h-4 w-4 text-purple-400" />
