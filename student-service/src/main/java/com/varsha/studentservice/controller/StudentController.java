@@ -349,10 +349,29 @@ public class StudentController {
 
     @GetMapping("/dashboard-summary")
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
-    public ResponseEntity<DashboardSummaryDTO> getDashboardSummary() {
+    public ResponseEntity<DashboardSummaryDTO> getDashboardSummary(
+            @RequestParam(value = "branch", required = false) String branch,
+            @RequestParam(value = "sections", required = false) List<String> sections) {
         String token = request.getHeader("Authorization");
         
-        long totalStudents = studentRepository.findByStatusNot("Deleted").size();
+        List<Student> activeStudents = studentRepository.findByStatusNot("Deleted");
+        
+        // Filter by branch
+        if (branch != null && !branch.trim().isEmpty() && !"All".equalsIgnoreCase(branch)) {
+            final String br = branch.trim();
+            activeStudents = activeStudents.stream()
+                    .filter(s -> s.getBranch() != null && s.getBranch().equalsIgnoreCase(br))
+                    .collect(Collectors.toList());
+        }
+        
+        // Filter by sections (multi-select)
+        if (sections != null && !sections.isEmpty() && !sections.contains("All")) {
+            activeStudents = activeStudents.stream()
+                    .filter(s -> s.getSection() != null && sections.stream().anyMatch(sec -> sec.equalsIgnoreCase(s.getSection())))
+                    .collect(Collectors.toList());
+        }
+
+        long totalStudents = activeStudents.size();
         long totalTeachers = 0;
         long totalCounselors = 0;
         
@@ -368,7 +387,6 @@ public class StudentController {
 
         long totalCsv = csvUploadRepository.count();
 
-        List<Student> activeStudents = studentRepository.findByStatusNot("Deleted");
         double overallAttendanceRate = 100.0;
         long totalPresentCount = 0;
         long totalAttendanceCount = 0;
@@ -404,6 +422,19 @@ public class StudentController {
                 continue;
             }
             Student student = studentOpt.get();
+            
+            // Apply filters to top performers
+            if (branch != null && !branch.trim().isEmpty() && !"All".equalsIgnoreCase(branch)) {
+                if (student.getBranch() == null || !student.getBranch().equalsIgnoreCase(branch.trim())) {
+                    continue;
+                }
+            }
+            if (sections != null && !sections.isEmpty() && !sections.contains("All")) {
+                if (student.getSection() == null || sections.stream().noneMatch(sec -> sec.equalsIgnoreCase(student.getSection()))) {
+                    continue;
+                }
+            }
+
             StudentRankingDTO dto = new StudentRankingDTO(
                     student.getId(), ranking.getRank(), student.getRollNumber(),
                     student.getFirstName(), student.getLastName(), student.getEmail(),

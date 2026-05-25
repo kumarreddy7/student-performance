@@ -24,6 +24,7 @@ import Profile from './pages/students/Profile';
 import Reports from './pages/students/Reports';
 import UserManagement from './pages/admin/UserManagement';
 import CounselingSlots from './pages/students/CounselingSlots';
+import CounselorTree from './pages/students/CounselorTree';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -112,6 +113,11 @@ function App() {
           <Route path="/counseling" element={
             <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher']}>
               <CounselingSlots />
+            </RoleProtectedRoute>
+          } />
+          <Route path="/counselor-tree" element={
+            <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher']}>
+              <CounselorTree />
             </RoleProtectedRoute>
           } />
           <Route path="/profile" element={<Profile />} />

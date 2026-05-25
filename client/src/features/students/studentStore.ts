@@ -33,7 +33,7 @@ interface StudentState {
   deleteCsv: (id: number) => Promise<void>;
   fetchRankings: () => Promise<any[]>;
   fetchMyPerformance: () => Promise<any>;
-  fetchDashboardSummary: () => Promise<any>;
+  fetchDashboardSummary: (branch?: string, sections?: string[]) => Promise<any>;
   fetchAttendance: (date: string) => Promise<any[]>;
   saveAttendance: (date: string, records: any[]) => Promise<void>;
   fetchAttendanceStats: (date: string) => Promise<any>;
@@ -209,9 +209,20 @@ export const useStudentStore = create<StudentState>((set) => ({
     }
   },
 
-  fetchDashboardSummary: async () => {
+  fetchDashboardSummary: async (branch?: string, sections?: string[]) => {
     try {
-      const response = await api.get('/students/dashboard-summary');
+      let url = '/students/dashboard-summary';
+      const params: string[] = [];
+      if (branch && branch !== 'All' && branch.trim() !== '') {
+        params.push(`branch=${encodeURIComponent(branch)}`);
+      }
+      if (sections && sections.length > 0 && !sections.includes('All')) {
+        params.push(`sections=${sections.map(s => encodeURIComponent(s)).join(',')}`);
+      }
+      if (params.length > 0) {
+        url += `?${params.join('&')}`;
+      }
+      const response = await api.get(url);
       return response.data;
     } catch (error: any) {
       throw error;

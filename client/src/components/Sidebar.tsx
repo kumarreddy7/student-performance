@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Activity, Calendar, FileSpreadsheet, Trophy, FileText, BarChart3, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Activity, Calendar, FileSpreadsheet, Trophy, FileText, BarChart3, ShieldCheck, GitBranch } from 'lucide-react';
 import { Drawer, useMediaQuery, useTheme } from '@mui/material';
 import { useAuthStore } from '../features/auth/authStore';
 import { normalizeRole } from '../lib/roles';
@@ -29,6 +29,7 @@ export default function Sidebar({ mobileOpen, handleDrawerToggle }: SidebarProps
       { name: 'Reports', path: '/reports', icon: FileText },
       { name: 'User Management', path: '/user-management', icon: ShieldCheck },
       { name: 'Counseling Calendar', path: '/counseling', icon: Calendar },
+      { name: 'Counselor Tree Map', path: '/counselor-tree', icon: GitBranch },
     );
   } else if (role === 'teacher' || role === 'counselor') {
     navItems.push(
@@ -37,12 +38,14 @@ export default function Sidebar({ mobileOpen, handleDrawerToggle }: SidebarProps
       { name: 'CSV Management', path: '/csv-management', icon: FileSpreadsheet },
       { name: 'Rankings', path: '/rankings', icon: Trophy },
       { name: 'Counseling Calendar', path: '/counseling', icon: Calendar },
+      { name: 'Counselor Tree Map', path: '/counselor-tree', icon: GitBranch },
     );
   } else if (role === 'student') {
     navItems.push(
       { name: 'My Rank', path: '/my-rank', icon: Trophy },
       { name: 'My Performance', path: '/my-performance', icon: BarChart3 },
       { name: 'Counseling Calendar', path: '/counseling', icon: Calendar },
+      { name: 'Counselor Tree Map', path: '/counselor-tree', icon: GitBranch },
     );
   }
 

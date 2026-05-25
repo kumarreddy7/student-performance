@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
+import api from '../../lib/axios';
 import { 
   Calendar, 
   Search, 
@@ -59,6 +60,7 @@ export default function Attendance() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('All');
   const [selectedSection, setSelectedSection] = useState<string>('All');
+  const [selectedBranch, setSelectedBranch] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -100,6 +102,20 @@ export default function Attendance() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchServerTime = async () => {
+      try {
+        const res = await api.get('/students/counseling/current-time');
+        if (res.data?.date) {
+          setDate(res.data.date);
+        }
+      } catch (err) {
+        console.error("Failed to fetch real-time server date", err);
+      }
+    };
+    fetchServerTime();
+  }, []);
 
   useEffect(() => {
     loadData(date);
@@ -202,6 +218,14 @@ export default function Attendance() {
     return ['All', ...Array.from(secSet)];
   }, [records]);
 
+  const branches = useMemo(() => {
+    const brSet = new Set<string>();
+    records.forEach(r => {
+      if (r.branch) brSet.add(r.branch);
+    });
+    return ['All', ...Array.from(brSet)];
+  }, [records]);
+
   // Filter students by search query, class filter, and section filter
   const filteredRecords = useMemo(() => {
     return records.filter(rec => {
@@ -215,6 +239,7 @@ export default function Attendance() {
       
       const matchClass = selectedClass === 'All' || rec.className === selectedClass;
       const matchSection = selectedSection === 'All' || rec.section === selectedSection;
+      const matchBranch = selectedBranch === 'All' || rec.branch === selectedBranch;
       
       let matchStatus = true;
       if (selectedStatus === 'PRESENT') {
@@ -225,9 +250,9 @@ export default function Attendance() {
         matchStatus = rec.status === null;
       }
       
-      return matchSearch && matchClass && matchSection && matchStatus;
+      return matchSearch && matchClass && matchSection && matchBranch && matchStatus;
     });
-  }, [records, searchQuery, selectedClass, selectedSection, selectedStatus]);
+  }, [records, searchQuery, selectedClass, selectedSection, selectedBranch, selectedStatus]);
 
   return (
     <div className="space-y-6">
@@ -408,6 +433,19 @@ export default function Attendance() {
                 >
                   {sections.map(s => (
                     <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Branch:</span>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="bg-transparent text-xs font-semibold text-gray-700 outline-none cursor-pointer border-none p-0"
+                >
+                  {branches.map(b => (
+                    <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
               </div>
