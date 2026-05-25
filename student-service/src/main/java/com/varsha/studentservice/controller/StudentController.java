@@ -351,7 +351,8 @@ public class StudentController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
     public ResponseEntity<DashboardSummaryDTO> getDashboardSummary(
             @RequestParam(value = "branch", required = false) String branch,
-            @RequestParam(value = "sections", required = false) List<String> sections) {
+            @RequestParam(value = "sections", required = false) List<String> sections,
+            @RequestParam(value = "counselorUsername", required = false) String counselorUsername) {
         String token = request.getHeader("Authorization");
         
         List<Student> activeStudents = studentRepository.findByStatusNot("Deleted");
@@ -368,6 +369,14 @@ public class StudentController {
         if (sections != null && !sections.isEmpty() && !sections.contains("All")) {
             activeStudents = activeStudents.stream()
                     .filter(s -> s.getSection() != null && sections.stream().anyMatch(sec -> sec.equalsIgnoreCase(s.getSection())))
+                    .collect(Collectors.toList());
+        }
+
+        // Filter by counselor
+        if (counselorUsername != null && !counselorUsername.trim().isEmpty()) {
+            final String cu = counselorUsername.trim();
+            activeStudents = activeStudents.stream()
+                    .filter(s -> s.getCounselorUsername() != null && s.getCounselorUsername().equalsIgnoreCase(cu))
                     .collect(Collectors.toList());
         }
 
@@ -431,6 +440,11 @@ public class StudentController {
             }
             if (sections != null && !sections.isEmpty() && !sections.contains("All")) {
                 if (student.getSection() == null || sections.stream().noneMatch(sec -> sec.equalsIgnoreCase(student.getSection()))) {
+                    continue;
+                }
+            }
+            if (counselorUsername != null && !counselorUsername.trim().isEmpty()) {
+                if (student.getCounselorUsername() == null || !student.getCounselorUsername().equalsIgnoreCase(counselorUsername.trim())) {
                     continue;
                 }
             }

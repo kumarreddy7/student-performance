@@ -22,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class AuthService {
 
@@ -73,7 +75,17 @@ public class AuthService {
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
         user.setEmail(signUpRequest.getEmail());
-        user.setPassword(encoder.encode(signUpRequest.getPassword()));
+
+        // Default password: first 3 chars of email + #123
+        String password = signUpRequest.getPassword();
+        if (password == null || password.trim().isEmpty()) {
+            String emailPrefix = signUpRequest.getEmail();
+            if (emailPrefix.length() >= 3) {
+                emailPrefix = emailPrefix.substring(0, 3);
+            }
+            password = emailPrefix + "#123";
+        }
+        user.setPassword(encoder.encode(password));
 
         String strRole = signUpRequest.getRole();
         Role userRole;
@@ -95,6 +107,14 @@ public class AuthService {
                     userRole = roleRepository.findByName(ERole.ROLE_COUNSELOR)
                             .orElseThrow(() -> new ResourceNotFoundException("Error: Role is not found."));
                     break;
+                case "principal":
+                    userRole = roleRepository.findByName(ERole.ROLE_PRINCIPAL)
+                            .orElseThrow(() -> new ResourceNotFoundException("Error: Role is not found."));
+                    break;
+                case "hod":
+                    userRole = roleRepository.findByName(ERole.ROLE_HOD)
+                            .orElseThrow(() -> new ResourceNotFoundException("Error: Role is not found."));
+                    break;
                 default:
                     userRole = roleRepository.findByName(ERole.ROLE_STUDENT)
                             .orElseThrow(() -> new ResourceNotFoundException("Error: Role is not found."));
@@ -102,9 +122,68 @@ public class AuthService {
         }
 
         user.setRole(userRole);
+
+        // Set branch and subjects for faculty/counselor
+        if (signUpRequest.getBranch() != null && !signUpRequest.getBranch().trim().isEmpty()) {
+            user.setBranch(signUpRequest.getBranch().trim());
+        }
+        if (signUpRequest.getSubjects() != null && !signUpRequest.getSubjects().trim().isEmpty()) {
+            user.setSubjects(signUpRequest.getSubjects().trim());
+        }
+
+        user.setIsHod(false);
+
         userRepository.save(user);
 
         return new MessageResponse("User registered successfully!");
+    }
+
+    @Transactional
+    public MessageResponse assignHod(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        if (user.getRole() == null || (user.getRole().getName() != ERole.ROLE_TEACHER && user.getRole().getName() != ERole.ROLE_HOD)) {
+            throw new BadRequestException("Only faculty members can be assigned as HOD.");
+        }
+
+        if (user.getBranch() == null || user.getBranch().trim().isEmpty()) {
+            throw new BadRequestException("This faculty member has no branch assigned. Please assign a branch first.");
+        }
+
+        // Demote the existing HOD of this branch
+        List<User> existingHods = userRepository.findByBranchAndIsHodTrue(user.getBranch());
+        for (User existingHod : existingHods) {
+            existingHod.setIsHod(false);
+            // Change role back to TEACHER
+            Role teacherRole = roleRepository.findByName(ERole.ROLE_TEACHER)
+                    .orElseThrow(() -> new ResourceNotFoundException("Error: Role is not found."));
+            existingHod.setRole(teacherRole);
+            userRepository.save(existingHod);
+        }
+
+        // Promote this user to HOD
+        user.setIsHod(true);
+        Role hodRole = roleRepository.findByName(ERole.ROLE_HOD)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: HOD Role is not found."));
+        user.setRole(hodRole);
+        userRepository.save(user);
+
+        return new MessageResponse("User assigned as HOD of " + user.getBranch() + " successfully!");
+    }
+
+    @Transactional
+    public MessageResponse removeHod(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        user.setIsHod(false);
+        Role teacherRole = roleRepository.findByName(ERole.ROLE_TEACHER)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Role is not found."));
+        user.setRole(teacherRole);
+        userRepository.save(user);
+
+        return new MessageResponse("HOD designation removed. User is now a regular faculty member.");
     }
 
     @Transactional
@@ -124,4 +203,3 @@ public class AuthService {
         userRepository.save(user);
     }
 }
-

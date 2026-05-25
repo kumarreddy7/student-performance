@@ -18,6 +18,9 @@ interface User {
   username: string;
   email: string;
   role: string;
+  branch?: string;
+  subjects?: string;
+  isHod?: boolean;
 }
 
 interface AuthState {

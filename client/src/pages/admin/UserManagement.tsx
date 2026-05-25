@@ -4,7 +4,8 @@ import { useAuthStore } from '../../features/auth/authStore';
 import { 
   Users, Mail, UserCheck, 
   BookOpen, Calendar, ChevronRight, Plus,
-  Search, RefreshCw, Layers, KeyRound, Trash2, ShieldAlert, AlertTriangle
+  Search, RefreshCw, Layers, KeyRound, Trash2, ShieldAlert, AlertTriangle,
+  Crown, Shield
 } from 'lucide-react';
 import { 
   CircularProgress, Dialog, DialogTitle, DialogContent, 
@@ -16,7 +17,10 @@ interface UserAccount {
   id: number;
   username: string;
   email: string;
-  role: 'student' | 'teacher' | 'counselor' | 'admin';
+  role: 'student' | 'teacher' | 'counselor' | 'admin' | 'principal' | 'hod';
+  branch?: string;
+  subjects?: string;
+  isHod?: boolean;
 }
 
 // Highly premium simulated profiles for teachers to meet the requirement
@@ -59,15 +63,28 @@ export default function UserManagement() {
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'teachers'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'teachers' | 'counselors' | 'hod'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [selectedBranch, setSelectedBranch] = useState<string>('all');
+
+  // Extract all unique branches from users to populate dropdown filter
+  const uniqueBranches = useMemo(() => {
+    const branches = new Set<string>();
+    users.forEach(u => {
+      if (u.branch) {
+        branches.add(u.branch.trim().toUpperCase());
+      }
+    });
+    return Array.from(branches).sort();
+  }, [users]);
+
   // Registration Dialog State
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [regUsername, setRegUsername] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState('student');
+  const [regBranch, setRegBranch] = useState('');
+  const [regSubjects, setRegSubjects] = useState('');
   const [regError, setRegError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [regMessage, setRegMessage] = useState('');
@@ -118,31 +135,59 @@ export default function UserManagement() {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regUsername || !regEmail || !regPassword || !regRole) {
-      setRegError('Please complete all form fields.');
+    if (!regUsername || !regEmail || !regRole) {
+      setRegError('Please complete all required fields.');
+      return;
+    }
+    if ((regRole === 'teacher' || regRole === 'counselor') && !regBranch) {
+      setRegError('Branch is required for faculty and counselor roles.');
       return;
     }
     setSubmitting(true);
     setRegError('');
     setRegMessage('');
     try {
+      const defaultPwd = regEmail.substring(0, 3) + '#123';
       await api.post('/auth/register', {
         username: regUsername,
         email: regEmail,
-        password: regPassword,
-        role: regRole
+        password: defaultPwd,
+        role: regRole,
+        branch: regBranch || undefined,
+        subjects: regSubjects || undefined
       });
-      setRegMessage('User registered and saved successfully!');
+      setRegMessage(`User registered successfully! Default password: ${defaultPwd}`);
       setRegUsername('');
       setRegEmail('');
-      setRegPassword('');
       setRegRole('student');
+      setRegBranch('');
+      setRegSubjects('');
       setIsAddDialogOpen(false);
       fetchUsers();
     } catch (err: any) {
       setRegError(err.response?.data?.message || 'User creation failed.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAssignHod = async (userId: number) => {
+    try {
+      const res = await api.put(`/auth/users/${userId}/assign-hod`);
+      setRegMessage(res.data?.message || 'HOD assigned successfully!');
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to assign HOD.');
+    }
+  };
+
+  const handleRemoveHod = async (userId: number) => {
+    try {
+      const res = await api.put(`/auth/users/${userId}/remove-hod`);
+      setRegMessage(res.data?.message || 'HOD designation removed.');
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to remove HOD.');
     }
   };
 
@@ -207,25 +252,34 @@ export default function UserManagement() {
     }
   };
 
-  // Filter users based on tab and search query
+  // Filter users based on tab, branch, and search query
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
-      const matchTab = activeTab === 'all' || u.role === 'teacher';
+      let matchTab = activeTab === 'all';
+      if (activeTab === 'teachers') matchTab = u.role === 'teacher' || u.role === 'hod';
+      if (activeTab === 'counselors') matchTab = u.role === 'counselor';
+      if (activeTab === 'hod') matchTab = u.role === 'hod' || u.isHod === true;
+
+      const matchBranch = selectedBranch === 'all' || (u.branch && u.branch.toLowerCase() === selectedBranch.toLowerCase());
+
       const q = searchQuery.toLowerCase();
       const matchSearch = !searchQuery || (
         u.username.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q)
+        u.role.toLowerCase().includes(q) ||
+        (u.branch || '').toLowerCase().includes(q)
       );
-      return matchTab && matchSearch;
+      return matchTab && matchBranch && matchSearch;
     });
-  }, [users, activeTab, searchQuery]);
+  }, [users, activeTab, selectedBranch, searchQuery]);
 
   // Extract counts
-  const teacherCount = useMemo(() => users.filter(u => u.role === 'teacher').length, [users]);
+  const teacherCount = useMemo(() => users.filter(u => u.role === 'teacher' || u.role === 'hod').length, [users]);
   const studentCount = useMemo(() => users.filter(u => u.role === 'student').length, [users]);
   const counselorCount = useMemo(() => users.filter(u => u.role === 'counselor').length, [users]);
   const adminCount = useMemo(() => users.filter(u => u.role === 'admin').length, [users]);
+  const principalCount = useMemo(() => users.filter(u => u.role === 'principal').length, [users]);
+  const hodCount = useMemo(() => users.filter(u => u.isHod === true).length, [users]);
 
   if (loading) {
     return (
@@ -291,13 +345,13 @@ export default function UserManagement() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Faculty Teachers</span>
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Faculty</span>
           <span className="text-3xl font-black text-gray-900 block mt-1">{teacherCount}</span>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Learner Students</span>
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Students</span>
           <span className="text-3xl font-black text-gray-900 block mt-1">{studentCount}</span>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
@@ -305,7 +359,15 @@ export default function UserManagement() {
           <span className="text-3xl font-black text-gray-900 block mt-1">{counselorCount}</span>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Administrators</span>
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">HODs</span>
+          <span className="text-3xl font-black text-gray-900 block mt-1">{hodCount}</span>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Principals</span>
+          <span className="text-3xl font-black text-gray-900 block mt-1">{principalCount}</span>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Admins</span>
           <span className="text-3xl font-black text-gray-900 block mt-1">{adminCount}</span>
         </div>
       </div>
@@ -315,39 +377,74 @@ export default function UserManagement() {
         {/* Toolbar */}
         <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
           {/* Tabs */}
-          <div className="flex gap-2 p-1 bg-gray-100/80 rounded-xl w-fit">
+          <div className="flex gap-1.5 p-1 bg-gray-100/80 rounded-xl w-fit flex-wrap">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'all' 
                   ? 'bg-white text-gray-900 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-900'
               }`}
             >
-              All User Accounts
+              All Accounts
             </button>
             <button
               onClick={() => setActiveTab('teachers')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'teachers' 
                   ? 'bg-white text-gray-900 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-900'
               }`}
             >
-              Faculty Teachers Directory
+              Faculty
+            </button>
+            <button
+              onClick={() => setActiveTab('counselors')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'counselors' 
+                  ? 'bg-white text-gray-900 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              Counselors
+            </button>
+            <button
+              onClick={() => setActiveTab('hod')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'hod' 
+                  ? 'bg-white text-gray-900 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              HODs
             </button>
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-xs w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search user record..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white rounded-xl pl-9 pr-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-xs text-gray-700 shadow-sm placeholder-gray-400"
-            />
+          {/* Controls: Branch Filter & Search */}
+          <div className="flex items-center gap-2 max-w-md w-full sm:w-auto">
+            {/* Branch Filter Select */}
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="bg-white rounded-xl px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-xs text-gray-700 shadow-sm font-semibold cursor-pointer"
+            >
+              <option value="all">All Branches</option>
+              {uniqueBranches.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+
+            {/* Search */}
+            <div className="relative flex-1 sm:w-60">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search user record..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white rounded-xl pl-9 pr-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-xs text-gray-700 shadow-sm placeholder-gray-400"
+              />
+            </div>
           </div>
         </div>
 
@@ -364,55 +461,98 @@ export default function UserManagement() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-150 text-[10px] font-bold text-gray-450 uppercase tracking-wider bg-gray-50/20">
-                  <th className="px-6 py-4">Account ID</th>
-                  <th className="px-6 py-4">Username</th>
-                  <th className="px-6 py-4">Email Address</th>
-                  <th className="px-6 py-4">Access Role</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-5 py-4">ID</th>
+                  <th className="px-5 py-4">Username</th>
+                  <th className="px-5 py-4">Email</th>
+                  <th className="px-5 py-4">Role</th>
+                  <th className="px-5 py-4">Branch</th>
+                  <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 text-sm">
                 {filteredUsers.map(userAccount => (
                   <tr key={userAccount.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-gray-700">#{userAccount.id}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4 font-bold text-gray-700">#{userAccount.id}</td>
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
                           {userAccount.username?.substring(0, 2).toUpperCase()}
                         </div>
-                        <span className="font-bold text-gray-900">{userAccount.username}</span>
+                        <div className="min-w-0">
+                          <span className="font-bold text-gray-900 block">{userAccount.username}</span>
+                          {userAccount.isHod && (
+                            <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md uppercase tracking-wider inline-flex items-center gap-0.5">
+                              <Crown className="h-2.5 w-2.5" /> HOD
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{userAccount.email}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4 text-gray-600 text-xs">{userAccount.email}</td>
+                    <td className="px-5 py-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize tracking-wider
                         ${userAccount.role === 'admin' ? 'bg-red-50 border-red-200 text-red-700' :
                           userAccount.role === 'teacher' ? 'bg-purple-50 border-purple-200 text-purple-700' :
-                          userAccount.role === 'counselor' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
+                          userAccount.role === 'hod' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                          userAccount.role === 'counselor' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                          userAccount.role === 'principal' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                          'bg-gray-50 border-gray-200 text-gray-700'}`}>
                         {userAccount.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2.5">
-                        {userAccount.role === 'teacher' && (
+                    <td className="px-5 py-4 text-xs text-gray-600 font-medium">
+                      {userAccount.branch || <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {(userAccount.role === 'teacher' || userAccount.role === 'hod') && (
                           <button
                             onClick={() => setSelectedTeacher(userAccount)}
-                            className="inline-flex items-center justify-center gap-1 text-xs font-bold text-purple-650 hover:text-purple-805 mr-2"
-                            title="View Teacher Profile"
+                            className="inline-flex items-center justify-center gap-1 text-[11px] font-bold text-purple-650 hover:text-purple-800 mr-1"
+                            title="View Profile"
                           >
-                            View Profile <ChevronRight className="h-4 w-4" />
+                            Profile <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+
+                        {/* HOD Assign/Remove */}
+                        {(userAccount.role === 'teacher') && userAccount.branch && (
+                          <button
+                            onClick={() => handleAssignHod(userAccount.id)}
+                            className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-100/50 hover:border-amber-200 transition-all"
+                            title={`Assign as HOD of ${userAccount.branch}`}
+                          >
+                            <Crown className="h-4 w-4" />
+                          </button>
+                        )}
+                        {(userAccount.role === 'hod' || userAccount.isHod) && (
+                          <button
+                            onClick={() => handleRemoveHod(userAccount.id)}
+                            className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 border border-amber-200 transition-all"
+                            title="Remove HOD designation"
+                          >
+                            <Crown className="h-4 w-4" />
                           </button>
                         )}
                         
                         {/* Reset Password Action */}
                         <button
                           onClick={() => {
+                            if (userAccount.role === 'admin') {
+                              alert("Cannot reset password for another administrator account.");
+                              return;
+                            }
                             setResetUserId(userAccount.id);
                             setResetUsername(userAccount.username);
                             setIsResetDialogOpen(true);
                           }}
-                          className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-100/50 hover:border-purple-200 transition-all"
-                          title="Reset Account Password"
+                          disabled={userAccount.role === 'admin'}
+                          className={`p-2 rounded-xl transition-all ${
+                            userAccount.role === 'admin'
+                              ? 'bg-gray-50 text-gray-300 border border-gray-150 cursor-not-allowed'
+                              : 'bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-100/50 hover:border-purple-200'
+                          }`}
+                          title={userAccount.role === 'admin' ? "Admin passwords cannot be reset here" : "Reset Account Password"}
                         >
                           <KeyRound className="h-4 w-4" />
                         </button>
@@ -420,17 +560,29 @@ export default function UserManagement() {
                         {/* Delete User Action */}
                         <button
                           onClick={() => {
+                            if (currentUser?.role !== 'admin') {
+                              alert("Only administrators can delete user accounts.");
+                              return;
+                            }
+                            if (userAccount.role === 'admin') {
+                              alert("Administrators cannot delete other administrator accounts.");
+                              return;
+                            }
                             setDeleteUserId(userAccount.id);
                             setDeleteUsername(userAccount.username);
                             setIsDeleteDialogOpen(true);
                           }}
-                          disabled={currentUser?.id === userAccount.id}
+                          disabled={currentUser?.id === userAccount.id || userAccount.role === 'admin' || currentUser?.role !== 'admin'}
                           className={`p-2 rounded-xl border transition-all ${
-                            currentUser?.id === userAccount.id
+                            currentUser?.id === userAccount.id || userAccount.role === 'admin' || currentUser?.role !== 'admin'
                               ? 'bg-gray-50 text-gray-300 border-gray-150 cursor-not-allowed'
                               : 'bg-rose-50 border-rose-100/50 hover:border-rose-200 text-rose-600 hover:bg-rose-100'
                           }`}
-                          title={currentUser?.id === userAccount.id ? "Cannot delete yourself" : "Delete Account Profile"}
+                          title={
+                            currentUser?.role !== 'admin' ? "Only administrators can delete user accounts" :
+                            currentUser?.id === userAccount.id ? "Cannot delete yourself" :
+                            userAccount.role === 'admin' ? "Cannot delete an administrator account" : "Delete Account Profile"
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -508,6 +660,29 @@ export default function UserManagement() {
                 {regError}
               </div>
             )}
+
+            <FormControl fullWidth>
+              <InputLabel id="reg-role-label">System Role</InputLabel>
+              <Select
+                labelId="reg-role-label"
+                value={regRole}
+                label="System Role"
+                onChange={(e) => {
+                  setRegRole(e.target.value);
+                  if (!['teacher', 'counselor'].includes(e.target.value)) {
+                    setRegBranch('');
+                    setRegSubjects('');
+                  }
+                }}
+                sx={{ borderRadius: '12px' }}
+              >
+                <MenuItem value="student">Student</MenuItem>
+                <MenuItem value="teacher">Faculty (Teacher)</MenuItem>
+                <MenuItem value="counselor">Counselor</MenuItem>
+                <MenuItem value="principal">Principal</MenuItem>
+                <MenuItem value="admin">Administrator</MenuItem>
+              </Select>
+            </FormControl>
             
             <TextField
               label="Username"
@@ -516,7 +691,6 @@ export default function UserManagement() {
               required
               value={regUsername}
               onChange={(e) => setRegUsername(e.target.value)}
-              className="!mt-2"
               slotProps={{
                 input: {
                   className: '!rounded-xl'
@@ -539,36 +713,45 @@ export default function UserManagement() {
               }}
             />
 
-            <TextField
-              label="Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              required
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              slotProps={{
-                input: {
-                  className: '!rounded-xl'
-                }
-              }}
-            />
+            {/* Branch field - for Faculty and Counselor only */}
+            {(regRole === 'teacher' || regRole === 'counselor') && (
+              <TextField
+                label="Branch (e.g. CSE, ECE, MECH)"
+                variant="outlined"
+                fullWidth
+                required
+                value={regBranch}
+                onChange={(e) => setRegBranch(e.target.value)}
+                slotProps={{
+                  input: {
+                    className: '!rounded-xl'
+                  }
+                }}
+              />
+            )}
 
-            <FormControl fullWidth>
-              <InputLabel id="reg-role-label">System Role</InputLabel>
-              <Select
-                labelId="reg-role-label"
-                value={regRole}
-                label="System Role"
-                onChange={(e) => setRegRole(e.target.value)}
-                sx={{ borderRadius: '12px' }}
-              >
-                <MenuItem value="student">Student</MenuItem>
-                <MenuItem value="teacher">Teacher</MenuItem>
-                <MenuItem value="counselor">Counselor</MenuItem>
-                <MenuItem value="admin">Administrator</MenuItem>
-              </Select>
-            </FormControl>
+            {/* Subjects field - for Faculty and Counselor only */}
+            {(regRole === 'teacher' || regRole === 'counselor') && (
+              <TextField
+                label="Subjects (comma-separated)"
+                variant="outlined"
+                fullWidth
+                placeholder="e.g. Data Structures, Algorithms, DBMS"
+                value={regSubjects}
+                onChange={(e) => setRegSubjects(e.target.value)}
+                slotProps={{
+                  input: {
+                    className: '!rounded-xl'
+                  }
+                }}
+              />
+            )}
+
+            {/* Default password notice */}
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-700 font-medium flex items-center gap-2">
+              <Shield className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+              <span>Default password: <strong>{regEmail ? regEmail.substring(0, 3) + '#123' : '(enter email)'}</strong></span>
+            </div>
           </DialogContent>
           <DialogActions className="!px-6 !pb-4 !pt-2">
             <Button 

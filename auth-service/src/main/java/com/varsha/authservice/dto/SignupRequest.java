@@ -18,7 +18,9 @@ public class SignupRequest {
 
     private String role;
 
-    @NotBlank
     @Size(min = 6, max = 40)
     private String password;
+
+    private String branch;
+    private String subjects;
 }

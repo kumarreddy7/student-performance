@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
 import { useAuthStore } from '../../features/auth/authStore';
-import { Upload, Plus, Users as UsersIcon, ChevronRight, Search, ChevronLeft, User, Mail, BarChart3, Calendar } from 'lucide-react';
+import { Upload, Plus, Users as UsersIcon, ChevronRight, Search, ChevronLeft, User, BarChart3, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/axios';
+import { filterStudentsForUser } from '../../lib/roleSecurity';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -78,6 +79,17 @@ export default function Students() {
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Unassigned filter states
+  const [unassignedBranchFilter, setUnassignedBranchFilter] = useState('');
+  const [unassignedSecFilter, setUnassignedSecFilter] = useState('');
+  
+  // Counselor filter states
+  const [counselorSearchName, setCounselorSearchName] = useState('');
+  const [counselorBranchFilter, setCounselorBranchFilter] = useState('');
+
+  // Drag and Drop drag tracking
+  const [draggedStudentBranch, setDraggedStudentBranch] = useState<string | null>(null);
+
   const fetchCounselorsList = async () => {
     try {
       const response = await api.get('/auth/counselors');
@@ -86,7 +98,16 @@ export default function Students() {
         (c: any, index: number, self: any[]) =>
           self.findIndex((t: any) => t.username === c.username) === index
       );
-      setCounselors(uniqueCounselors);
+      
+      // Filter counselor cards so a counselor only sees their own assignment card
+      if (user?.role === 'counselor') {
+        const scopedCounselors = uniqueCounselors.filter(
+          (c: any) => c.username.toLowerCase() === user.username.toLowerCase()
+        );
+        setCounselors(scopedCounselors);
+      } else {
+        setCounselors(uniqueCounselors);
+      }
     } catch (err) {
       console.error('Failed to fetch counselors list', err);
     }
@@ -101,7 +122,9 @@ export default function Students() {
         (s: any, index: number, self: any[]) =>
           self.findIndex((t: any) => t.rollNumber === s.rollNumber) === index
       );
-      setAllStudents(uniqueStudents);
+      // Filter by role scope
+      const scopedStudents = filterStudentsForUser(uniqueStudents, user);
+      setAllStudents(scopedStudents);
     } catch (err) {
       console.error('Failed to fetch all students list', err);
     } finally {
@@ -118,7 +141,19 @@ export default function Students() {
         (a: any, index: number, self: any[]) =>
           self.findIndex((t: any) => t.id === a.id) === index
       );
-      setAppointments(uniqueAppointments);
+      
+      // Scope appointments for teachers (own class students only) and counselors (own students only)
+      let scopedAppointments = uniqueAppointments;
+      if (user?.role === 'teacher' || user?.role === 'counselor') {
+        const responseStudents = await api.get('/students');
+        const scopedStudents = filterStudentsForUser(responseStudents.data || [], user);
+        const scopedStudentRolls = new Set(scopedStudents.map(s => s.rollNumber.toLowerCase()));
+        scopedAppointments = uniqueAppointments.filter((app: any) => 
+          app.studentRollNumber && scopedStudentRolls.has(app.studentRollNumber.toLowerCase())
+        );
+      }
+      
+      setAppointments(scopedAppointments);
     } catch (err) {
       console.error('Failed to fetch all appointments list', err);
     } finally {
@@ -157,14 +192,37 @@ export default function Students() {
     return allStudents.filter(s => !s.counselorUsername && s.status !== 'Deleted');
   }, [allStudents]);
 
+  const uniqueUnassignedBranches = useMemo(() => {
+    const branches = unassignedStudents.map(s => s.branch).filter(Boolean);
+    return Array.from(new Set(branches));
+  }, [unassignedStudents]);
+
+  const uniqueUnassignedSections = useMemo(() => {
+    const filtered = unassignedBranchFilter 
+      ? unassignedStudents.filter(s => s.branch === unassignedBranchFilter)
+      : unassignedStudents;
+    const sections = filtered.map(s => s.section).filter(Boolean);
+    return Array.from(new Set(sections)).sort();
+  }, [unassignedStudents, unassignedBranchFilter]);
+
+  const filteredUnassignedStudents = useMemo(() => {
+    return unassignedStudents.filter(s => {
+      const matchBranch = !unassignedBranchFilter || s.branch === unassignedBranchFilter;
+      const matchSec = !unassignedSecFilter || s.section === unassignedSecFilter;
+      return matchBranch && matchSec;
+    });
+  }, [unassignedStudents, unassignedBranchFilter, unassignedSecFilter]);
+
 
   const loadPagedStudents = async () => {
     try {
       const data = await fetchStudentsPaged(currentPage, pageSize, searchQuery);
       if (data) {
-        setPagedStudents(data.content || []);
+        // Enforce role scoping on paged students
+        const filtered = filterStudentsForUser(data.content || [], user);
+        setPagedStudents(filtered);
         setTotalPages(data.totalPages || 0);
-        setTotalElements(data.totalElements || 0);
+        setTotalElements(filtered.length === (data.content || []).length ? (data.totalElements || 0) : filtered.length);
       }
     } catch (err) {
       console.error("Failed to load paged students", err);
@@ -393,6 +451,34 @@ export default function Students() {
               </div>
             )}
 
+            {/* Counselor Filter Panel (Admin/Teacher only) */}
+            {(user?.role === 'admin' || user?.role === 'teacher') && (
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row items-center gap-4 w-full">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search counselor by username..."
+                    value={counselorSearchName}
+                    onChange={(e) => setCounselorSearchName(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:bg-white"
+                  />
+                </div>
+                <div className="w-full sm:w-56">
+                  <select
+                    value={counselorBranchFilter}
+                    onChange={(e) => setCounselorBranchFilter(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:bg-white"
+                  >
+                    <option value="">All Handled Branches</option>
+                    {Array.from(new Set(allStudents.map(s => s.branch).filter(Boolean))).sort().map(branch => (
+                      <option key={branch} value={branch}>{branch}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             {/* CLASSIC ROSTER CARDS VIEW */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Unassigned Students Card */}
@@ -404,33 +490,89 @@ export default function Students() {
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-sm">Unassigned Students</h3>
-                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Allocation Required</p>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider font-mono">Pending Alloc</p>
                     </div>
                   </div>
                   <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
                     {unassignedStudents.length} Left
                   </span>
                 </div>
-                <div className="p-6 flex-1 flex flex-col min-h-[200px]">
+                
+                {/* BRANCH & SEC DROP DOWN FILTER */}
+                <div className="px-6 py-4 bg-gray-50 border-b border-gray-100/80 flex flex-row gap-2.5">
+                  <div className="flex-1">
+                    <select
+                      value={unassignedBranchFilter}
+                      onChange={(e) => {
+                        setUnassignedBranchFilter(e.target.value);
+                        setUnassignedSecFilter(''); // Reset section
+                      }}
+                      className="w-full bg-white rounded-xl px-3 py-2 border border-gray-200 text-xs font-semibold text-gray-705 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="">Select Branch</option>
+                      {uniqueUnassignedBranches.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <select
+                      value={unassignedSecFilter}
+                      disabled={!unassignedBranchFilter}
+                      onChange={(e) => setUnassignedSecFilter(e.target.value)}
+                      className="w-full bg-white rounded-xl px-3 py-2 border border-gray-200 text-xs font-semibold text-gray-705 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-450"
+                    >
+                      <option value="">Select Sec</option>
+                      {uniqueUnassignedSections.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-6 flex-1 flex flex-col min-h-[220px]">
                   {unassignedStudents.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-10">
                       <Plus className="h-8 w-8 text-green-450 mb-2 rotate-45" />
                       <p className="font-bold text-gray-700 text-xs">All Assignment Complete</p>
                       <p className="text-[10px] text-gray-400 mt-1">Every active student has an advisor.</p>
                     </div>
+                  ) : !unassignedBranchFilter || !unassignedSecFilter ? (
+                    /* Show only total unassigned count if filters are unselected */
+                    <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-8">
+                      <UsersIcon className="h-10 w-10 text-purple-200 mb-3" />
+                      <h4 className="font-bold text-gray-700 text-xs">Selection Required</h4>
+                      <p className="text-[11px] text-gray-400 mt-1.5 px-4 leading-relaxed">
+                        There are <strong>{unassignedStudents.length}</strong> students pending. Please select branch and section to allocate.
+                      </p>
+                    </div>
+                  ) : filteredUnassignedStudents.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-8">
+                      <p className="font-bold text-gray-700 text-xs">No students found</p>
+                      <p className="text-[10px] text-gray-450 mt-1">No unassigned students match this filter.</p>
+                    </div>
                   ) : (
+                    /* Draggable students list */
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      {unassignedStudents.map((student) => (
+                      {filteredUnassignedStudents.map((student) => (
                         <div
                           key={student.id}
+                          draggable="true"
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', student.id.toString());
+                            setDraggedStudentBranch(student.branch);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedStudentBranch(null);
+                          }}
                           onClick={() => navigate(`/students/${student.id}`)}
-                          className="flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/40 border border-gray-100 hover:border-purple-100 rounded-2xl cursor-pointer transition-all duration-150 group"
+                          className="flex items-center justify-between p-3 bg-gray-50/60 hover:bg-purple-50/40 border border-gray-100 hover:border-purple-100 rounded-2xl cursor-grab active:cursor-grabbing transition-all duration-150 group"
                         >
                           <div className="min-w-0">
                             <p className="font-bold text-xs text-gray-900 group-hover:text-purple-650 truncate">
                               {student.firstName} {student.lastName}
                             </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Roll: {student.rollNumber} • {student.className}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5 font-semibold font-mono">Roll: {student.rollNumber} • {student.branch} - Sec {student.section}</p>
                           </div>
                           <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
                         </div>
@@ -447,14 +589,64 @@ export default function Students() {
                   if (b.username === user?.username) return 1;
                   return a.username.localeCompare(b.username);
                 })
+                .filter(c => {
+                  const assigned = allStudents.filter(s => s.counselorUsername === c.username && s.status !== 'Deleted');
+                  const cBranches = Array.from(new Set(assigned.map(s => s.branch).filter(Boolean)));
+                  
+                  const matchesName = !counselorSearchName || c.username.toLowerCase().includes(counselorSearchName.toLowerCase());
+                  const matchesBranch = !counselorBranchFilter || cBranches.includes(counselorBranchFilter);
+                  return matchesName && matchesBranch;
+                })
                 .map((counselor) => {
                   const assigned = allStudents.filter(s => s.counselorUsername === counselor.username && s.status !== 'Deleted');
                   const isSelf = counselor.username === user?.username;
+                  
+                  // Compute branches currently handled
+                  const cBranches = Array.from(new Set(assigned.map(s => s.branch).filter(Boolean)));
+                  const cBranchesStr = cBranches.length > 0 ? cBranches.join(', ') : 'None yet';
+                  
+                  // Drag drop branch matching
+                  const isDragActive = draggedStudentBranch !== null;
+                  const cBranch = cBranches[0]; // Active branch for the counselor if assigned
+                  const isValidDrop = isDragActive && (!cBranch || cBranch === draggedStudentBranch);
+                  const isInvalidDrop = isDragActive && cBranch && cBranch !== draggedStudentBranch;
+
                   return (
                     <div 
-                      key={counselor.id} 
-                      className={`bg-white shadow-sm rounded-3xl overflow-hidden flex flex-col hover:shadow-md transition-all duration-200 ${
-                        isSelf ? 'border-2 border-purple-500 shadow-purple-100/30' : 'border border-gray-100'
+                      key={counselor.id}
+                      onDragOver={(e) => {
+                        if (isValidDrop) {
+                          e.preventDefault(); // allow drop zone
+                        }
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        const studentIdStr = e.dataTransfer.getData('text/plain');
+                        if (!studentIdStr) return;
+                        const studentId = parseInt(studentIdStr);
+                        const student = allStudents.find(s => s.id === studentId);
+                        if (!student) return;
+
+                        if (cBranch && cBranch !== student.branch) {
+                          alert(`Strict Validation: Counselor "${counselor.username}" handles the "${cBranch}" branch. You cannot allocate them to student "${student.firstName}" who is in the "${student.branch}" branch.`);
+                          return;
+                        }
+
+                        try {
+                          await api.patch(`/students/${student.id}/counselor?counselorUsername=${encodeURIComponent(counselor.username)}`);
+                          setMessage(`Successfully assigned counselor "${counselor.username}" to student "${student.firstName} ${student.lastName}".`);
+                          fetchAllStudentsList();
+                          fetchCounselorsList();
+                        } catch (err: any) {
+                          alert(err.response?.data?.message || 'Failed to allocate counselor.');
+                        }
+                      }}
+                      className={`bg-white shadow-sm rounded-3xl overflow-hidden flex flex-col transition-all duration-300 ${
+                        isSelf ? 'border-2 border-purple-500 shadow-purple-100/30' : 'border border-gray-150'
+                      } ${
+                        isValidDrop ? 'border-emerald-400 bg-emerald-50/10 ring-4 ring-emerald-400/10 scale-102 shadow-lg animate-pulse' : ''
+                      } ${
+                        isInvalidDrop ? 'opacity-35 border-rose-250 bg-rose-50/5 scale-95 cursor-not-allowed' : ''
                       }`}
                     >
                       <div className={`px-6 py-5 border-b flex items-center justify-between ${
@@ -473,9 +665,11 @@ export default function Students() {
                                 </span>
                               )}
                             </h3>
-                            <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-400 font-medium">
-                              <Mail className="h-3 w-3" />
+                            <div className="flex flex-col gap-0.5 mt-0.5 text-[10px] text-gray-400 font-medium">
                               <span className="truncate max-w-[130px]">{counselor.email}</span>
+                              <span className="text-purple-650 font-bold uppercase text-[9px] font-mono tracking-wider">
+                                Branch: {cBranchesStr}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -490,7 +684,7 @@ export default function Students() {
                           <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 py-10">
                             <UsersIcon className="h-8 w-8 text-gray-300 mb-2" />
                             <p className="font-bold text-gray-700 text-xs">No allocations yet</p>
-                            <p className="text-[10px] text-gray-400 mt-1">Assign students on their profile page.</p>
+                            <p className="text-[10px] text-gray-400 mt-1">Drag and drop unassigned students here.</p>
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -504,7 +698,7 @@ export default function Students() {
                                   <p className="font-bold text-xs text-gray-900 group-hover:text-purple-650 truncate">
                                     {student.firstName} {student.lastName}
                                   </p>
-                                  <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Roll: {student.rollNumber} • {student.className}</p>
+                                  <p className="text-[10px] text-gray-400 mt-0.5 font-medium">Roll: {student.rollNumber} • {student.className} - {student.branch}</p>
                                 </div>
                                 <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
                               </div>

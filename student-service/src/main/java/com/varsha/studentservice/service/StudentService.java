@@ -207,6 +207,23 @@ public class StudentService {
         if ("Deleted".equals(student.getStatus())) {
             throw new BadRequestException("Cannot update a deleted student");
         }
+        
+        if (counselorUsername != null && !counselorUsername.trim().isEmpty()) {
+            List<Student> assignedStudents = studentRepository.findByStatusNotAndCounselorUsername("Deleted", counselorUsername);
+            if (assignedStudents != null && !assignedStudents.isEmpty()) {
+                String counselorBranch = null;
+                for (Student s : assignedStudents) {
+                    if (s.getBranch() != null && !s.getBranch().trim().isEmpty()) {
+                        counselorBranch = s.getBranch();
+                        break;
+                    }
+                }
+                if (counselorBranch != null && student.getBranch() != null && !counselorBranch.equalsIgnoreCase(student.getBranch())) {
+                    throw new BadRequestException("Strict Validation: Counselor '" + counselorUsername + "' handles the '" + counselorBranch + "' branch. You cannot allocate them to a student in the '" + student.getBranch() + "' branch.");
+                }
+            }
+        }
+        
         student.setCounselorUsername(counselorUsername);
         studentRepository.save(student);
     }

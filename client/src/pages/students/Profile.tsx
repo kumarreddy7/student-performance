@@ -16,6 +16,8 @@ export default function Profile() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [editOldPassword, setEditOldPassword] = useState('');
+  const [editConfirmPassword, setEditConfirmPassword] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
@@ -43,6 +45,8 @@ export default function Profile() {
     setEditEmail(user?.email || '');
     setEditPhone(studentDetails?.phoneNumber || '');
     setEditPassword('');
+    setEditOldPassword('');
+    setEditConfirmPassword('');
     setEditError('');
     setEditSuccess('');
     setIsEditDialogOpen(true);
@@ -50,6 +54,18 @@ export default function Profile() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (editPassword) {
+      if (user?.role !== 'admin' && !editOldPassword) {
+        setEditError('Old password is required to change password.');
+        return;
+      }
+      if (user?.role !== 'admin' && editPassword !== editConfirmPassword) {
+        setEditError('New passwords do not match.');
+        return;
+      }
+    }
+    
     setUpdating(true);
     setEditError('');
     setEditSuccess('');
@@ -57,7 +73,8 @@ export default function Profile() {
       // 1. Update auth service details
       await api.put('/auth/profile', {
         email: editEmail,
-        password: editPassword
+        password: editPassword,
+        oldPassword: editOldPassword
       });
 
       // 2. Update student service details if student
@@ -279,8 +296,23 @@ export default function Profile() {
               />
             )}
 
+            {user?.role !== 'admin' && editPassword && (
+              <TextField
+                label="Old Password"
+                type="password"
+                variant="outlined"
+                fullWidth
+                required
+                value={editOldPassword}
+                onChange={(e) => setEditOldPassword(e.target.value)}
+                slotProps={{
+                  input: { className: '!rounded-xl' }
+                }}
+              />
+            )}
+
             <TextField
-              label="Change Password (Optional)"
+              label={user?.role === 'admin' ? "Change Password (Optional)" : "New Password (Optional)"}
               type="password"
               variant="outlined"
               placeholder="Leave blank to keep current"
@@ -293,6 +325,21 @@ export default function Profile() {
                 }
               }}
             />
+
+            {user?.role !== 'admin' && editPassword && (
+              <TextField
+                label="Confirm New Password"
+                type="password"
+                variant="outlined"
+                fullWidth
+                required
+                value={editConfirmPassword}
+                onChange={(e) => setEditConfirmPassword(e.target.value)}
+                slotProps={{
+                  input: { className: '!rounded-xl' }
+                }}
+              />
+            )}
           </DialogContent>
           <DialogActions className="!px-6 !pb-4 !pt-2">
             <Button

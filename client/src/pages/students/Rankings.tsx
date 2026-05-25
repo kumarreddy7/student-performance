@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
 import { Search, Trophy, FileDown, ArrowUpDown, RefreshCw, Star } from 'lucide-react';
 import { CircularProgress } from '@mui/material';
+import { useAuthStore } from '../../features/auth/authStore';
+import { normalizeRole } from '../../lib/roles';
+import { getTeacherClassAssignment } from '../../lib/roleSecurity';
+import api from '../../lib/axios';
 
 type SortKey = 'rank' | 'name' | 'totalMarks' | 'percentage';
 type SortOrder = 'asc' | 'desc';
@@ -23,8 +27,28 @@ export default function Rankings() {
   const loadRankings = async () => {
     setLoading(true);
     try {
+      const user = useAuthStore.getState().user;
+      const role = normalizeRole(user?.role);
       const data = await fetchRankings();
-      setRankings(data);
+      
+      let filtered = data || [];
+      if (role === 'teacher') {
+        const tc = getTeacherClassAssignment(user?.username);
+        filtered = (data || []).filter((r: any) => 
+          r.className && r.className.toLowerCase() === tc.className.toLowerCase() &&
+          r.branch && r.branch.toLowerCase() === tc.branch.toLowerCase() &&
+          r.section && r.section.toLowerCase() === tc.section.toLowerCase()
+        );
+      } else if (role === 'counselor') {
+        const studRes = await api.get('/students');
+        const myStudents = (studRes.data || []).filter((s: any) => 
+          s.counselorUsername && s.counselorUsername.toLowerCase() === user?.username.toLowerCase() && s.status !== 'Deleted'
+        );
+        const myStudentRolls = new Set(myStudents.map((s: any) => s.rollNumber.toLowerCase()));
+        filtered = (data || []).filter((r: any) => r.rollNumber && myStudentRolls.has(r.rollNumber.toLowerCase()));
+      }
+      
+      setRankings(filtered);
     } catch (err) {
       console.error(err);
     } finally {

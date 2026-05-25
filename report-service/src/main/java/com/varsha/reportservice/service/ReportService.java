@@ -29,9 +29,9 @@ public class ReportService {
     @Autowired
     private AnalyticsServiceClient analyticsServiceClient;
 
-    public byte[] generateWatchlistPdf(String token) {
+    public byte[] generateWatchlistPdf(String token, String branch, List<String> sections, String counselorUsername) {
         // Fetch data
-        Map<String, Object> dashboardSummary = studentServiceClient.getDashboardSummary(token);
+        Map<String, Object> dashboardSummary = studentServiceClient.getDashboardSummary(token, branch, sections, counselorUsername);
         
         // Extract records
         @SuppressWarnings("unchecked")
@@ -84,9 +84,9 @@ public class ReportService {
         return out.toByteArray();
     }
 
-    public byte[] generateWatchlistExcel(String token) {
+    public byte[] generateWatchlistExcel(String token, String branch, List<String> sections, String counselorUsername) {
         // Fetch data
-        Map<String, Object> dashboardSummary = studentServiceClient.getDashboardSummary(token);
+        Map<String, Object> dashboardSummary = studentServiceClient.getDashboardSummary(token, branch, sections, counselorUsername);
         
         // Extract records
         @SuppressWarnings("unchecked")

@@ -31,6 +31,9 @@ public class AuthController {
     @Autowired
     private com.varsha.authservice.security.JwtUtil jwtUtil;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder encoder;
+
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok(authService.authenticateUser(loginRequest));
@@ -58,7 +61,10 @@ public class AuthController {
                         user.getId(),
                         user.getUsername(),
                         user.getEmail(),
-                        user.getRole() != null ? user.getRole().getName().name().replace("ROLE_", "").toLowerCase() : "student"
+                        user.getRole() != null ? user.getRole().getName().name().replace("ROLE_", "").toLowerCase() : "student",
+                        user.getBranch(),
+                        user.getSubjects(),
+                        user.getIsHod()
                 ))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(users);
@@ -72,7 +78,10 @@ public class AuthController {
                         user.getId(),
                         user.getUsername(),
                         user.getEmail(),
-                        "counselor"
+                        "counselor",
+                        user.getBranch(),
+                        user.getSubjects(),
+                        user.getIsHod()
                 ))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(counselors);
@@ -81,6 +90,10 @@ public class AuthController {
     @DeleteMapping("/users/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<MessageResponse> deleteUser(@PathVariable("id") Long id) {
+        com.varsha.authservice.entity.User user = userRepository.findById(id).orElse(null);
+        if (user != null && user.getRole() != null && user.getRole().getName() == ERole.ROLE_ADMIN) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Deletion of Administrator accounts is strictly prohibited."));
+        }
         userRepository.deleteById(id);
         return ResponseEntity.ok(new MessageResponse("User account deleted successfully."));
     }
@@ -96,8 +109,24 @@ public class AuthController {
         com.varsha.authservice.entity.User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
                 
+        if (user.getRole() != null && user.getRole().getName() == ERole.ROLE_ADMIN) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Administrators cannot reset passwords for other administrator accounts."));
+        }
+                
         authService.updatePassword(user, newPassword);
         return ResponseEntity.ok(new MessageResponse("Password reset successfully."));
+    }
+
+    @PutMapping("/users/{id}/assign-hod")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<MessageResponse> assignHod(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(authService.assignHod(id));
+    }
+
+    @PutMapping("/users/{id}/remove-hod")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<MessageResponse> removeHod(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(authService.removeHod(id));
     }
 
     @PutMapping("/profile")
@@ -123,10 +152,18 @@ public class AuthController {
         }
         
         String newPassword = body.get("password");
+        String oldPassword = body.get("oldPassword");
+        
+        if (newPassword != null && !newPassword.trim().isEmpty()) {
+            if (user.getRole() == null || user.getRole().getName() != ERole.ROLE_ADMIN) {
+                if (oldPassword == null || !encoder.matches(oldPassword, user.getPassword())) {
+                    return ResponseEntity.badRequest().body(new MessageResponse("Incorrect current password."));
+                }
+            }
+        }
+        
         authService.updateProfile(user, newEmail, newPassword);
         
         return ResponseEntity.ok(new MessageResponse("Profile updated successfully."));
     }
 }
-
-

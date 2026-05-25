@@ -1,6 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
 import api from '../../lib/axios';
+import { useAuthStore } from '../../features/auth/authStore';
+import { normalizeRole } from '../../lib/roles';
+import { getTeacherClassAssignment } from '../../lib/roleSecurity';
 import { 
   Calendar, 
   Search, 
@@ -89,8 +92,28 @@ export default function Attendance() {
         markedBy: r.markedBy || null
       }));
 
-      setRecords(formattedRecords);
-      setOriginalRecords(JSON.parse(JSON.stringify(formattedRecords)));
+      const user = useAuthStore.getState().user;
+      const userRole = normalizeRole(user?.role);
+      let scoped = formattedRecords;
+
+      if (userRole === 'teacher') {
+        const tc = getTeacherClassAssignment(user?.username);
+        scoped = formattedRecords.filter((r: any) => 
+          r.className && r.className.toLowerCase() === tc.className.toLowerCase() &&
+          r.branch && r.branch.toLowerCase() === tc.branch.toLowerCase() &&
+          r.section && r.section.toLowerCase() === tc.section.toLowerCase()
+        );
+      } else if (userRole === 'counselor') {
+        const studRes = await api.get('/students');
+        const myStudents = (studRes.data || []).filter((s: any) => 
+          s.counselorUsername && s.counselorUsername.toLowerCase() === user?.username.toLowerCase() && s.status !== 'Deleted'
+        );
+        const myStudentRolls = new Set(myStudents.map((s: any) => s.rollNumber.toLowerCase()));
+        scoped = formattedRecords.filter((r: any) => r.rollNumber && myStudentRolls.has(r.rollNumber.toLowerCase()));
+      }
+
+      setRecords(scoped);
+      setOriginalRecords(JSON.parse(JSON.stringify(scoped)));
       setStats(fetchedStats);
     } catch (err: any) {
       console.error('Error fetching attendance data:', err);

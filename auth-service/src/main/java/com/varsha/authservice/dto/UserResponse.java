@@ -12,4 +12,7 @@ public class UserResponse {
     private String username;
     private String email;
     private String role;
+    private String branch;
+    private String subjects;
+    private Boolean isHod;
 }

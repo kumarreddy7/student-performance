@@ -28,6 +28,26 @@ export default function Sidebar({ mobileOpen, handleDrawerToggle }: SidebarProps
       { name: 'Rankings', path: '/rankings', icon: Trophy },
       { name: 'Reports', path: '/reports', icon: FileText },
       { name: 'User Management', path: '/user-management', icon: ShieldCheck },
+      { name: 'Branch Management', path: '/branch-management', icon: GitBranch },
+      { name: 'Counseling Calendar', path: '/counseling', icon: Calendar },
+      { name: 'Counselor Tree Map', path: '/counselor-tree', icon: GitBranch },
+    );
+  } else if (role === 'principal') {
+    // Principal: read-only access to all dashboards
+    navItems.push(
+      { name: 'Students', path: '/students', icon: Users },
+      { name: 'Attendance', path: '/attendance', icon: Calendar },
+      { name: 'Rankings', path: '/rankings', icon: Trophy },
+      { name: 'Reports', path: '/reports', icon: FileText },
+      { name: 'Counseling Calendar', path: '/counseling', icon: Calendar },
+      { name: 'Counselor Tree Map', path: '/counselor-tree', icon: GitBranch },
+    );
+  } else if (role === 'hod') {
+    // HOD: sees their branch students, read-only
+    navItems.push(
+      { name: 'Students', path: '/students', icon: Users },
+      { name: 'Attendance', path: '/attendance', icon: Calendar },
+      { name: 'Rankings', path: '/rankings', icon: Trophy },
       { name: 'Counseling Calendar', path: '/counseling', icon: Calendar },
       { name: 'Counselor Tree Map', path: '/counselor-tree', icon: GitBranch },
     );

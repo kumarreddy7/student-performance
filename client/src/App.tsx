@@ -23,6 +23,7 @@ import AccessDenied from './pages/auth/AccessDenied';
 import Profile from './pages/students/Profile';
 import Reports from './pages/students/Reports';
 import UserManagement from './pages/admin/UserManagement';
+import BranchManagement from './pages/admin/BranchManagement';
 import CounselingSlots from './pages/students/CounselingSlots';
 import CounselorTree from './pages/students/CounselorTree';
 
@@ -66,17 +67,17 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<ErrorBoundary title="Dashboard failed to load"><Dashboard /></ErrorBoundary>} />
           <Route path="/students" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
               <Students />
             </RoleProtectedRoute>
           } />
           <Route path="/students/:id" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
               <StudentProfile />
             </RoleProtectedRoute>
           } />
           <Route path="/attendance" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
               <Attendance />
             </RoleProtectedRoute>
           } />
@@ -86,7 +87,7 @@ function App() {
             </RoleProtectedRoute>
           } />
           <Route path="/rankings" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
               <Rankings />
             </RoleProtectedRoute>
           } />
@@ -101,7 +102,7 @@ function App() {
             </RoleProtectedRoute>
           } />
           <Route path="/reports" element={
-            <RoleProtectedRoute allowedRoles={['admin']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'principal']}>
               <Reports />
             </RoleProtectedRoute>
           } />
@@ -110,13 +111,18 @@ function App() {
               <UserManagement />
             </RoleProtectedRoute>
           } />
+          <Route path="/branch-management" element={
+            <RoleProtectedRoute allowedRoles={['admin']}>
+              <BranchManagement />
+            </RoleProtectedRoute>
+          } />
           <Route path="/counseling" element={
-            <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher']}>
+            <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher', 'principal', 'hod']}>
               <CounselingSlots />
             </RoleProtectedRoute>
           } />
           <Route path="/counselor-tree" element={
-            <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher']}>
+            <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher', 'principal', 'hod']}>
               <CounselorTree />
             </RoleProtectedRoute>
           } />
