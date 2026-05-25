@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm run dev (React Client)",
+      "type": "npm",
+      "script": "dev",
+      "path": "client",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Maven Clean Compile All",
+      "type": "shell",
+      "command": "mvn clean compile",
+      "problemMatcher": [],
+      "group": "build"
+    }
+  ]
+}

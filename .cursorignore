@@ -1,0 +1,19 @@
+# Build outputs
+**/target/
+**/dist/
+**/.vite/
+**/.vite-temp/
+
+# Dependencies
+**/node_modules/
+
+# IDE and logs
+.idea/
+*.log
+*.log.*
+
+# Legacy / backup (not active code)
+server_monolith_backup/
+
+# Sample data at root (optional uploads)
+dummy_students.csv

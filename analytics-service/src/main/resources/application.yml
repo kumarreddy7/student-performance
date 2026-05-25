@@ -1,0 +1,22 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: analytics-service
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/student_performance_analytics
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+app:
+  jwt:
+    secret: 4f1c1f2e9d9b6a7c4f1c1f2e9d9b6a7c4f1c1f2e9d9b6a7c4f1c1f2e9d9b6a7c
+    expiration-ms: 86400000

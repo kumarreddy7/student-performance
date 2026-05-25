@@ -1,0 +1,60 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "1. Discovery Server (8761)",
+      "request": "launch",
+      "mainClass": "com.varsha.discoveryserver.DiscoveryServerApplication",
+      "projectName": "discovery-server"
+    },
+    {
+      "type": "java",
+      "name": "2. API Gateway (8080)",
+      "request": "launch",
+      "mainClass": "com.varsha.apigateway.ApiGatewayApplication",
+      "projectName": "api-gateway"
+    },
+    {
+      "type": "java",
+      "name": "3. Auth Service (8081)",
+      "request": "launch",
+      "mainClass": "com.varsha.authservice.AuthServiceApplication",
+      "projectName": "auth-service"
+    },
+    {
+      "type": "java",
+      "name": "4. Student Service (8082)",
+      "request": "launch",
+      "mainClass": "com.varsha.studentservice.StudentServiceApplication",
+      "projectName": "student-service"
+    },
+    {
+      "type": "java",
+      "name": "5. Analytics Service (8083)",
+      "request": "launch",
+      "mainClass": "com.varsha.analyticsservice.AnalyticsServiceApplication",
+      "projectName": "analytics-service"
+    },
+    {
+      "type": "java",
+      "name": "6. Report Service (8084)",
+      "request": "launch",
+      "mainClass": "com.varsha.reportservice.ReportServiceApplication",
+      "projectName": "report-service"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "🚀 Start All Backends",
+      "configurations": [
+        "1. Discovery Server (8761)",
+        "2. API Gateway (8080)",
+        "3. Auth Service (8081)",
+        "4. Student Service (8082)",
+        "5. Analytics Service (8083)",
+        "6. Report Service (8084)"
+      ]
+    }
+  ]
+}

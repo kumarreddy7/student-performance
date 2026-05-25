@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: student-performance-predictor
+  datasource:
+    url: jdbc:postgresql://localhost:5432/student_performance
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/student_performance_analytics
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: 4f1c1f2e9d9b6a7c4f1c1f2e9d9b6a7c4f1c1f2e9d9b6a7c4f1c1f2e9d9b6a7c
+    expiration-ms: 86400000 # 1 day
+    refresh-expiration-ms: 604800000 # 7 days

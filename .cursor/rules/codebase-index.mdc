@@ -1,0 +1,33 @@
+---
+description: Student Performance Predictor — architecture and coding conventions
+alwaysApply: true
+---
+
+# Codebase conventions
+
+Read **AGENTS.md** at the repo root for the full service map, API endpoints, and directory index.
+
+## Active code only
+
+- Work in: `client/`, `discovery-server/`, `api-gateway/`, `auth-service/`, `student-service/`, `analytics-service/`, `report-service/`
+- Do **not** edit `server_monolith_backup/` unless explicitly migrating from the monolith
+
+## Backend
+
+- Package base: `com.varsha.{servicename}`
+- Public HTTP paths must stay under `/api/...` (gateway routes in `api-gateway/src/main/resources/application.yml`)
+- Cross-service data: Feign clients only — no shared databases between services
+- Start order: discovery-server (8761) → api-gateway (8080) → other services
+- Secrets and DB URLs live in each service’s `application.yml` — never copy JWT secrets into chat or new files
+
+## Frontend
+
+- Use `client/src/lib/axios.ts` (`baseURL: http://localhost:8080/api`) for all API calls
+- State: Zustand stores under `client/src/features/`
+- Roles are compared lowercased: `admin`, `teacher`, `counselor`, `student`
+
+## When adding features
+
+1. Place logic in the service that owns the data (students → student-service, risk → analytics-service, etc.)
+2. Expose new routes through the gateway path prefix for that service
+3. Add UI routes in `client/src/App.tsx` and nav in `client/src/components/Sidebar.tsx` with matching `RoleProtectedRoute` rules
