@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
 import { Search, Trophy, Medal, Star, RefreshCw } from 'lucide-react';
 import { CircularProgress } from '@mui/material';
+import { useAuthStore } from '../../features/auth/authStore';
 
 export default function MyRank() {
   const { fetchRankings } = useStudentStore();
+  const { anonymize } = useAuthStore();
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -72,9 +74,9 @@ export default function MyRank() {
               <Medal className="h-5 w-5 text-amber-300" />
               <span className="text-xs font-bold uppercase tracking-wider text-purple-200">Your Current Standings</span>
             </div>
-            <h2 className="text-2xl font-extrabold">{selfRecord.firstName} {selfRecord.lastName}</h2>
+            <h2 className="text-2xl font-extrabold">{anonymize ? `STUDENT_ST-${selfRecord.studentId}` : `${selfRecord.firstName} ${selfRecord.lastName}`}</h2>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-purple-100 font-medium">
-              <span>Roll: <span className="font-mono text-white">{selfRecord.rollNumber}</span></span>
+              <span>Roll: <span className="font-mono text-white">{anonymize ? `ST-${selfRecord.studentId}` : selfRecord.rollNumber}</span></span>
               <span>•</span>
               <span>Class: <span className="text-white">{selfRecord.className}</span></span>
               <span>•</span>
@@ -176,12 +178,12 @@ export default function MyRank() {
                         )}
                       </td>
                       <td className="px-6 py-4 font-mono text-xs text-gray-600">
-                        {isSelf ? item.rollNumber : '*****'}
+                        {isSelf ? (anonymize ? `ST-${item.studentId}` : item.rollNumber) : '*****'}
                       </td>
                       <td className="px-6 py-4">
                         {isSelf ? (
                           <span className="text-gray-900 flex items-center gap-2">
-                            {item.firstName} {item.lastName}
+                            {anonymize ? `STUDENT_ST-${item.studentId}` : `${item.firstName} ${item.lastName}`}
                             <span className="bg-purple-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">You</span>
                           </span>
                         ) : (

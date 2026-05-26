@@ -1,9 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
-import api from '../../lib/axios';
 import { useAuthStore } from '../../features/auth/authStore';
-import { normalizeRole } from '../../lib/roles';
-import { getTeacherClassAssignment } from '../../lib/roleSecurity';
 import { 
   Calendar, 
   Search, 
@@ -30,9 +27,7 @@ interface AttendanceRecord {
   rollNumber: string;
   className: string;
   section: string;
-  branch: string;
   status: 'PRESENT' | 'ABSENT' | null;
-  markedBy?: string | null;
 }
 
 interface AttendanceStats {
@@ -46,6 +41,7 @@ interface AttendanceStats {
 
 export default function Attendance() {
   const { fetchAttendance, saveAttendance, fetchAttendanceStats } = useStudentStore();
+  const { anonymize } = useAuthStore();
   
   // Set default date to today's date in local time zone (YYYY-MM-DD)
   const getTodayDateString = () => {
@@ -63,8 +59,6 @@ export default function Attendance() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('All');
   const [selectedSection, setSelectedSection] = useState<string>('All');
-  const [selectedBranch, setSelectedBranch] = useState<string>('All');
-  const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | null }>({ text: '', type: null });
@@ -87,33 +81,11 @@ export default function Attendance() {
         rollNumber: r.rollNumber || '',
         className: r.className || '',
         section: r.section || '',
-        branch: r.branch || '',
-        status: r.status === 'PRESENT' || r.status === 'ABSENT' ? r.status : null,
-        markedBy: r.markedBy || null
+        status: r.status === 'PRESENT' || r.status === 'ABSENT' ? r.status : null
       }));
 
-      const user = useAuthStore.getState().user;
-      const userRole = normalizeRole(user?.role);
-      let scoped = formattedRecords;
-
-      if (userRole === 'teacher') {
-        const tc = getTeacherClassAssignment(user?.username);
-        scoped = formattedRecords.filter((r: any) => 
-          r.className && r.className.toLowerCase() === tc.className.toLowerCase() &&
-          r.branch && r.branch.toLowerCase() === tc.branch.toLowerCase() &&
-          r.section && r.section.toLowerCase() === tc.section.toLowerCase()
-        );
-      } else if (userRole === 'counselor') {
-        const studRes = await api.get('/students');
-        const myStudents = (studRes.data || []).filter((s: any) => 
-          s.counselorUsername && s.counselorUsername.toLowerCase() === user?.username.toLowerCase() && s.status !== 'Deleted'
-        );
-        const myStudentRolls = new Set(myStudents.map((s: any) => s.rollNumber.toLowerCase()));
-        scoped = formattedRecords.filter((r: any) => r.rollNumber && myStudentRolls.has(r.rollNumber.toLowerCase()));
-      }
-
-      setRecords(scoped);
-      setOriginalRecords(JSON.parse(JSON.stringify(scoped)));
+      setRecords(formattedRecords);
+      setOriginalRecords(JSON.parse(JSON.stringify(formattedRecords)));
       setStats(fetchedStats);
     } catch (err: any) {
       console.error('Error fetching attendance data:', err);
@@ -125,20 +97,6 @@ export default function Attendance() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const fetchServerTime = async () => {
-      try {
-        const res = await api.get('/students/counseling/current-time');
-        if (res.data?.date) {
-          setDate(res.data.date);
-        }
-      } catch (err) {
-        console.error("Failed to fetch real-time server date", err);
-      }
-    };
-    fetchServerTime();
-  }, []);
 
   useEffect(() => {
     loadData(date);
@@ -169,15 +127,8 @@ export default function Attendance() {
 
   // Check if any change has been made
   const hasChanges = useMemo(() => {
-    return JSON.stringify(records.map(r => ({ studentId: r.studentId, status: r.status }))) !== 
-           JSON.stringify(originalRecords.map(r => ({ studentId: r.studentId, status: r.status })));
+    return JSON.stringify(records) !== JSON.stringify(originalRecords);
   }, [records, originalRecords]);
-
-  // Compute who marked this attendance
-  const markedByInfo = useMemo(() => {
-    const rec = records.find(r => r.markedBy);
-    return rec ? rec.markedBy : null;
-  }, [records]);
 
   // Compute live local statistics for direct user feedback before saving
   const liveStats = useMemo(() => {
@@ -241,14 +192,6 @@ export default function Attendance() {
     return ['All', ...Array.from(secSet)];
   }, [records]);
 
-  const branches = useMemo(() => {
-    const brSet = new Set<string>();
-    records.forEach(r => {
-      if (r.branch) brSet.add(r.branch);
-    });
-    return ['All', ...Array.from(brSet)];
-  }, [records]);
-
   // Filter students by search query, class filter, and section filter
   const filteredRecords = useMemo(() => {
     return records.filter(rec => {
@@ -262,20 +205,10 @@ export default function Attendance() {
       
       const matchClass = selectedClass === 'All' || rec.className === selectedClass;
       const matchSection = selectedSection === 'All' || rec.section === selectedSection;
-      const matchBranch = selectedBranch === 'All' || rec.branch === selectedBranch;
       
-      let matchStatus = true;
-      if (selectedStatus === 'PRESENT') {
-        matchStatus = rec.status === 'PRESENT';
-      } else if (selectedStatus === 'ABSENT') {
-        matchStatus = rec.status === 'ABSENT';
-      } else if (selectedStatus === 'UNMARKED') {
-        matchStatus = rec.status === null;
-      }
-      
-      return matchSearch && matchClass && matchSection && matchBranch && matchStatus;
+      return matchSearch && matchClass && matchSection;
     });
-  }, [records, searchQuery, selectedClass, selectedSection, selectedBranch, selectedStatus]);
+  }, [records, searchQuery, selectedClass, selectedSection]);
 
   return (
     <div className="space-y-6">
@@ -301,14 +234,9 @@ export default function Attendance() {
       {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Calendar className="h-7 w-7 text-purple-600" />
             Attendance Tracking
-            {markedByInfo && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-105 text-purple-700 border border-purple-200">
-                Marked by: {markedByInfo}
-              </span>
-            )}
           </h1>
           <p className="mt-1 text-sm text-gray-500 font-medium">
             Select a date, mark student attendance states, and view dynamic stats.
@@ -459,33 +387,6 @@ export default function Attendance() {
                   ))}
                 </select>
               </div>
-
-              <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Branch:</span>
-                <select
-                  value={selectedBranch}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                  className="bg-transparent text-xs font-semibold text-gray-700 outline-none cursor-pointer border-none p-0"
-                >
-                  {branches.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status:</span>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="bg-transparent text-xs font-semibold text-gray-700 outline-none cursor-pointer border-none p-0"
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="PRESENT">Present Only</option>
-                  <option value="ABSENT">Absent Only</option>
-                  <option value="UNMARKED">Unmarked Only</option>
-                </select>
-              </div>
             </div>
           </div>
 
@@ -553,7 +454,7 @@ export default function Attendance() {
                 <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-450 uppercase tracking-wider bg-gray-50/30">
                   <th className="px-6 py-4">Roll No</th>
                   <th className="px-6 py-4">Student</th>
-                  <th className="px-6 py-4">Class / Sec / Branch</th>
+                  <th className="px-6 py-4">Class / Section</th>
                   <th className="px-6 py-4 hidden md:table-cell">Email</th>
                   <th className="px-6 py-4 text-center">Attendance Status</th>
                 </tr>
@@ -566,32 +467,34 @@ export default function Attendance() {
                   >
                     {/* Roll Number */}
                     <td className="px-6 py-4 font-bold text-gray-900 text-sm">
-                      {record.rollNumber}
+                      {anonymize ? `ST-${record.studentId}` : record.rollNumber}
                     </td>
 
                     {/* Student Identity Cell */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                          {record.firstName?.charAt(0)}{record.lastName?.charAt(0)}
+                          {anonymize ? 'ST' : `${record.firstName?.charAt(0)}${record.lastName?.charAt(0)}`}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-gray-900 leading-none mb-1">
-                            {record.firstName} {record.lastName}
+                            {anonymize ? `STUDENT_ST-${record.studentId}` : `${record.firstName} ${record.lastName}`}
                           </p>
-                          <p className="text-[11px] text-gray-400 font-medium md:hidden">{record.email}</p>
+                          <p className="text-[11px] text-gray-400 font-medium md:hidden">
+                            {anonymize ? `student_${record.studentId}@school.edu` : record.email}
+                          </p>
                         </div>
                       </div>
                     </td>
 
                     {/* Class & Section */}
                     <td className="px-6 py-4 text-sm text-gray-700 font-medium">
-                      {record.className} - {record.section} - {record.branch || 'N/A'}
+                      {record.className} - {record.section}
                     </td>
 
                     {/* Email Column (hidden on mobile) */}
                     <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell">
-                      {record.email}
+                      {anonymize ? `student_${record.studentId}@school.edu` : record.email}
                     </td>
 
                     {/* Pill Buttons Toggle Selector */}

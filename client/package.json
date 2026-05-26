@@ -22,7 +22,6 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.76.0",
-    "react-is": "^19.2.6",
     "react-router-dom": "^7.15.1",
     "recharts": "^3.8.1",
     "tailwindcss": "^4.3.0",
@@ -42,8 +41,5 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
-  },
-  "overrides": {
-    "react-is": "^19.2.6"
   }
 }

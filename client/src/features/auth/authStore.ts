@@ -1,26 +1,11 @@
 import { create } from 'zustand';
 import api from '../../lib/axios';
-import { normalizeRole } from '../../lib/roles';
-
-function parseStoredUser(): User | null {
-  const raw = localStorage.getItem('user');
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as User;
-    return { ...parsed, role: normalizeRole(parsed.role) };
-  } catch {
-    return null;
-  }
-}
 
 interface User {
   id: number;
   username: string;
   email: string;
   role: string;
-  branch?: string;
-  subjects?: string;
-  isHod?: boolean;
 }
 
 interface AuthState {
@@ -29,24 +14,27 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  anonymize: boolean;
   login: (credentials: any) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => void;
+  toggleAnonymize: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: parseStoredUser(),
+  user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null,
   token: localStorage.getItem('token'),
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
   error: null,
+  anonymize: false,
 
   login: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
       const response = await api.post('/auth/login', credentials);
       const { token, id, username, email, role } = response.data;
-      const user = { id, username, email, role: normalizeRole(role) };
+      const user = { id, username, email, role };
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -79,5 +67,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     set({ user: null, token: null, isAuthenticated: false });
+  },
+
+  toggleAnonymize: () => {
+    set((state) => ({ anonymize: !state.anonymize }));
   },
 }));

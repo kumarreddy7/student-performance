@@ -17,7 +17,6 @@ spring:
               - POST
               - PUT
               - DELETE
-              - PATCH
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
@@ -43,9 +42,6 @@ spring:
             - Path=/api/reports/**
 
 eureka:
-  instance:
-    prefer-ip-address: true
-    ip-address: 127.0.0.1
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/

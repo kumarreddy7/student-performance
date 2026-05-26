@@ -26,20 +26,18 @@ public class AttendanceService {
     private StudentRepository studentRepository;
 
     @Transactional
-    public void saveAttendance(LocalDate date, List<AttendanceDTO> attendanceList, String markedBy) {
+    public void saveAttendance(LocalDate date, List<AttendanceDTO> attendanceList) {
         for (AttendanceDTO dto : attendanceList) {
             Optional<Attendance> existing = attendanceRepository.findByStudentIdAndDate(dto.getStudentId(), date);
             Attendance attendance;
             if (existing.isPresent()) {
                 attendance = existing.get();
                 attendance.setStatus(dto.getStatus());
-                attendance.setMarkedBy(markedBy);
             } else {
                 attendance = new Attendance();
                 attendance.setStudentId(dto.getStudentId());
                 attendance.setDate(date);
                 attendance.setStatus(dto.getStatus());
-                attendance.setMarkedBy(markedBy);
             }
             attendanceRepository.save(attendance);
         }
@@ -49,8 +47,8 @@ public class AttendanceService {
         List<Student> activeStudents = studentRepository.findByStatusNot("Deleted");
         List<Attendance> attendanceList = attendanceRepository.findByDate(date);
         
-        Map<Long, Attendance> attendanceMap = attendanceList.stream()
-                .collect(Collectors.toMap(Attendance::getStudentId, att -> att, (s1, s2) -> s1));
+        Map<Long, String> attendanceMap = attendanceList.stream()
+                .collect(Collectors.toMap(Attendance::getStudentId, Attendance::getStatus, (s1, s2) -> s1));
 
         List<Student> displayStudents = new ArrayList<>(activeStudents);
         Set<Long> activeStudentIds = activeStudents.stream().map(Student::getId).collect(Collectors.toSet());
@@ -70,10 +68,7 @@ public class AttendanceService {
             dto.setRollNumber(student.getRollNumber());
             dto.setClassName(student.getClassName());
             dto.setSection(student.getSection());
-            dto.setBranch(student.getBranch());
-            Attendance att = attendanceMap.get(student.getId());
-            dto.setStatus(att != null ? att.getStatus() : null);
-            dto.setMarkedBy(att != null ? att.getMarkedBy() : null);
+            dto.setStatus(attendanceMap.getOrDefault(student.getId(), null));
             return dto;
         }).collect(Collectors.toList());
     }

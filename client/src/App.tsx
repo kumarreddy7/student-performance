@@ -1,8 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './features/auth/authStore';
-import { normalizeRole } from './lib/roles';
-import ErrorBoundary from './components/ErrorBoundary';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -22,10 +20,6 @@ import MyPerformance from './pages/students/MyPerformance';
 import AccessDenied from './pages/auth/AccessDenied';
 import Profile from './pages/students/Profile';
 import Reports from './pages/students/Reports';
-import UserManagement from './pages/admin/UserManagement';
-import BranchManagement from './pages/admin/BranchManagement';
-import CounselingSlots from './pages/students/CounselingSlots';
-import CounselorTree from './pages/students/CounselorTree';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -39,7 +33,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const RoleProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
   const user = useAuthStore((state) => state.user);
-  const userRole = normalizeRole(user?.role);
+  const userRole = user?.role?.toLowerCase() || '';
   
   if (!user || !allowedRoles.includes(userRole)) {
     return <Navigate to="/access-denied" replace />;
@@ -65,19 +59,19 @@ function App() {
           </ProtectedRoute>
         }>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<ErrorBoundary title="Dashboard failed to load"><Dashboard /></ErrorBoundary>} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/students" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
               <Students />
             </RoleProtectedRoute>
           } />
           <Route path="/students/:id" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
               <StudentProfile />
             </RoleProtectedRoute>
           } />
           <Route path="/attendance" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
               <Attendance />
             </RoleProtectedRoute>
           } />
@@ -87,7 +81,7 @@ function App() {
             </RoleProtectedRoute>
           } />
           <Route path="/rankings" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor', 'principal', 'hod']}>
+            <RoleProtectedRoute allowedRoles={['admin', 'teacher', 'counselor']}>
               <Rankings />
             </RoleProtectedRoute>
           } />
@@ -102,28 +96,8 @@ function App() {
             </RoleProtectedRoute>
           } />
           <Route path="/reports" element={
-            <RoleProtectedRoute allowedRoles={['admin', 'principal']}>
+            <RoleProtectedRoute allowedRoles={['admin']}>
               <Reports />
-            </RoleProtectedRoute>
-          } />
-          <Route path="/user-management" element={
-            <RoleProtectedRoute allowedRoles={['admin']}>
-              <UserManagement />
-            </RoleProtectedRoute>
-          } />
-          <Route path="/branch-management" element={
-            <RoleProtectedRoute allowedRoles={['admin']}>
-              <BranchManagement />
-            </RoleProtectedRoute>
-          } />
-          <Route path="/counseling" element={
-            <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher', 'principal', 'hod']}>
-              <CounselingSlots />
-            </RoleProtectedRoute>
-          } />
-          <Route path="/counselor-tree" element={
-            <RoleProtectedRoute allowedRoles={['student', 'counselor', 'admin', 'teacher', 'principal', 'hod']}>
-              <CounselorTree />
             </RoleProtectedRoute>
           } />
           <Route path="/profile" element={<Profile />} />

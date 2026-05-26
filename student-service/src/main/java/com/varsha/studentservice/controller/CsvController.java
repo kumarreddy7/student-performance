@@ -62,8 +62,12 @@ public class CsvController {
     }
 
     @DeleteMapping("/files/{id}")
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
     public ResponseEntity<Void> deleteCsvLog(@PathVariable Long id) {
-        throw new com.varsha.studentservice.exception.BadRequestException("Deletion of CSV upload history is disabled.");
+        if (!csvUploadRepository.existsById(id)) {
+            throw new com.varsha.studentservice.exception.ResourceNotFoundException("File log not found with id " + id);
+        }
+        csvUploadRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }

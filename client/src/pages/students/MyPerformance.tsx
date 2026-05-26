@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
-import { Award, Calendar, BookOpen, GraduationCap, RefreshCw, BarChart3, User, Users } from 'lucide-react';
-import { CircularProgress, Button } from '@mui/material';
+import { Award, Calendar, BookOpen, GraduationCap, RefreshCw, BarChart3 } from 'lucide-react';
+import { CircularProgress } from '@mui/material';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from 'recharts';
-import api from '../../lib/axios';
 
 export default function MyPerformance() {
   const { fetchMyPerformance } = useStudentStore();
@@ -11,14 +10,8 @@ export default function MyPerformance() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Batch Peer Tree States
-  const [peers, setPeers] = useState<any[]>([]);
-  const [loadingPeers, setLoadingPeers] = useState(false);
-  const [treeExpanded, setTreeExpanded] = useState(false);
-
   useEffect(() => {
     loadPerformance();
-    loadPeers();
   }, []);
 
   const loadPerformance = async () => {
@@ -31,23 +24,6 @@ export default function MyPerformance() {
       setError(err.response?.data?.message || 'Failed to fetch personal performance data.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadPeers = async () => {
-    setLoadingPeers(true);
-    try {
-      const res = await api.get('/students/my-batch-peers');
-      // Deduplicate peers by rollNumber
-      const uniquePeers = (res.data || []).filter(
-        (p: any, index: number, self: any[]) =>
-          self.findIndex((t: any) => t.rollNumber === p.rollNumber) === index
-      );
-      setPeers(uniquePeers);
-    } catch (err) {
-      console.error('Failed to fetch batch peers', err);
-    } finally {
-      setLoadingPeers(false);
     }
   };
 
@@ -110,7 +86,7 @@ export default function MyPerformance() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card 1: Rank */}
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-between">
           <div className="space-y-1">
@@ -164,20 +140,6 @@ export default function MyPerformance() {
           </div>
           <div className="bg-indigo-100 text-indigo-600 p-3.5 rounded-2xl">
             <GraduationCap className="h-6 w-6" />
-          </div>
-        </div>
-
-        {/* Card 5: Assigned Counselor */}
-        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Assigned Counselor</span>
-            <h2 className="text-2xl font-black text-purple-750 capitalize truncate max-w-[130px]">
-              {data.student?.counselorUsername ? data.student.counselorUsername : 'Unassigned'}
-            </h2>
-            <p className="text-xs text-gray-400">Academic Advisor</p>
-          </div>
-          <div className="bg-purple-100 text-purple-650 p-3.5 rounded-2xl">
-            <User className="h-6 w-6" />
           </div>
         </div>
       </div>
@@ -266,92 +228,6 @@ export default function MyPerformance() {
             }
           </div>
         </div>
-      </div>
-
-      {/* Dynamic Advisor & Peer Batch Tree */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-purple-600" />
-            <h2 className="font-bold text-gray-900 text-lg">My Advisor & Peer Batch</h2>
-          </div>
-          {peers.length > 0 && (
-            <Button
-              variant="outlined"
-              onClick={() => setTreeExpanded(!treeExpanded)}
-              className="!rounded-xl !capitalize !text-xs !font-bold !px-4 !py-2 hover:!bg-purple-50/50 !border-gray-250 !text-gray-700"
-            >
-              {treeExpanded ? 'Hide Batch Peers' : 'View Batch Peers'}
-            </Button>
-          )}
-        </div>
-
-        {loadingPeers ? (
-          <div className="py-8 text-center flex flex-col items-center justify-center">
-            <CircularProgress size={20} className="!text-purple-600" />
-            <p className="mt-2 text-xs text-gray-500 font-semibold">Synchronizing batch roster...</p>
-          </div>
-        ) : !data.student?.counselorUsername ? (
-          <div className="bg-amber-50/50 border border-amber-100/50 p-6 rounded-2xl text-center text-amber-800">
-            <User className="h-10 w-10 text-amber-500 mx-auto mb-2" />
-            <h4 className="font-bold text-sm">No Counselor Assigned Yet</h4>
-            <p className="text-xs text-amber-600 mt-1">An administrator or teacher will allocate an advisor to your profile soon.</p>
-          </div>
-        ) : (
-          <div className="space-y-6 bg-gray-50/50 border border-gray-150 p-6 rounded-3xl relative">
-            {/* Advisor Node */}
-            <div className="flex flex-col items-center relative">
-              <div className="bg-purple-900 text-white border border-purple-800 shadow-sm px-6 py-3 rounded-2xl text-center max-w-xs relative z-10">
-                <div className="bg-purple-800 p-1.5 rounded-lg text-purple-300 w-fit mx-auto mb-1 flex items-center justify-center">
-                  <User className="h-4 w-4" />
-                </div>
-                <h4 className="font-bold text-xs capitalize">Advisor: {data.student.counselorUsername}</h4>
-                <p className="text-[8px] text-purple-200 uppercase tracking-widest font-bold">Academic Counselor</p>
-              </div>
-              <div className="h-6 w-0.5 bg-purple-200 absolute -bottom-6"></div>
-            </div>
-
-            {/* Batch Node */}
-            <div className="flex flex-col items-center pt-6 relative">
-              <div className="bg-white border border-indigo-150 shadow-sm px-5 py-2.5 rounded-xl text-center max-w-sm relative z-10">
-                <span className="block text-xs font-bold text-indigo-950">
-                  Batch: {data.student.className} - {data.student.branch} - Sec {data.student.section}
-                </span>
-                <span className="block text-[8px] text-gray-400 font-semibold uppercase tracking-wider mt-0.5">
-                  {peers.length + 1} Total Students (Advisor: {data.student.counselorUsername})
-                </span>
-              </div>
-              {treeExpanded && peers.length > 0 && (
-                <div className="h-6 w-0.5 bg-indigo-200 absolute -bottom-6"></div>
-              )}
-            </div>
-
-            {/* Peer List branching node */}
-            {treeExpanded && peers.length > 0 && (
-              <div className="pt-6 border-t border-dashed border-gray-250 max-w-xl mx-auto space-y-3 relative pl-6 border-l-2 border-dashed border-indigo-200">
-                {peers.map((peer) => (
-                  <div key={peer.id} className="relative flex items-center justify-between p-3 bg-white border border-gray-150 rounded-xl">
-                    <div className="absolute -left-[30px] top-5 h-2 w-2 rounded-full border border-white bg-indigo-500 shadow-sm z-10"></div>
-                    <div className="min-w-0 flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-purple-100 text-purple-650 flex items-center justify-center font-bold text-[10px]">
-                        {peer.firstName?.charAt(0)}{peer.lastName?.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-xs text-gray-900 capitalize">
-                          {peer.firstName} {peer.lastName}
-                        </p>
-                        <p className="text-[8px] text-gray-400 font-semibold uppercase tracking-wider mt-0.5">Roll: {peer.rollNumber}</p>
-                      </div>
-                    </div>
-                    <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider">
-                      Batch Mate
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Subject Marks Table */}

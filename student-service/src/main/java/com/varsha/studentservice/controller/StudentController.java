@@ -48,13 +48,7 @@ public class StudentController {
     private CsvUploadRepository csvUploadRepository;
 
     @Autowired
-    private CounselingAppointmentRepository counselingAppointmentRepository;
-
-    @Autowired
-    private CounselorOffDateRepository counselorOffDateRepository;
-
-    @Autowired
-    private InterventionRepository interventionRepository;
+    private AssignmentMarkRepository assignmentMarkRepository;
 
     @Autowired
     private AuthServiceClient authServiceClient;
@@ -83,23 +77,9 @@ public class StudentController {
         return null;
     }
 
-    private String getUsernameFromToken() {
-        String headerAuth = request.getHeader("Authorization");
-        if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            String jwt = headerAuth.substring(7);
-            return jwtUtil.getUserNameFromJwtToken(jwt);
-        }
-        return "Unknown";
-    }
-
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
     public ResponseEntity<List<StudentDTO>> getAllStudents() {
-        String role = getRoleFromToken();
-        if ("ROLE_COUNSELOR".equals(role)) {
-            String counselorUsername = getUsernameFromToken();
-            return ResponseEntity.ok(studentService.getStudentsByCounselor(counselorUsername));
-        }
         return ResponseEntity.ok(studentService.getAllStudents());
     }
 
@@ -110,9 +90,7 @@ public class StudentController {
             @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestParam(value = "search", defaultValue = "") String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
-        String role = getRoleFromToken();
-        String counselorUsername = "ROLE_COUNSELOR".equals(role) ? getUsernameFromToken() : null;
-        return ResponseEntity.ok(studentService.getStudentsPaged(search, counselorUsername, pageable));
+        return ResponseEntity.ok(studentService.getStudentsPaged(search, pageable));
     }
 
     @GetMapping("/{id}")
@@ -122,7 +100,7 @@ public class StudentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR') or hasAuthority('ROLE_STUDENT')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
     public ResponseEntity<StudentDTO> createStudent(@Valid @RequestBody StudentDTO studentDTO) {
         return new ResponseEntity<>(studentService.createStudent(studentDTO), HttpStatus.CREATED);
     }
@@ -131,15 +109,6 @@ public class StudentController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
     public ResponseEntity<StudentDTO> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentDTO studentDTO) {
         return ResponseEntity.ok(studentService.updateStudent(id, studentDTO));
-    }
-
-    @PatchMapping("/{id}/counselor")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Void> allocateCounselor(
-            @PathVariable Long id,
-            @RequestParam("counselorUsername") String counselorUsername) {
-        studentService.allocateCounselor(id, counselorUsername);
-        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{id}")
@@ -161,13 +130,25 @@ public class StudentController {
         return ResponseEntity.ok(studentService.getInterventionsForStudent(id));
     }
 
+    @GetMapping("/{id}/assignments")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR') or hasAuthority('ROLE_STUDENT')")
+    public ResponseEntity<List<AssignmentMark>> getAssignments(@PathVariable Long id) {
+        return ResponseEntity.ok(assignmentMarkRepository.findByStudentId(id));
+    }
+
+    @PostMapping("/{id}/assignments")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER')")
+    public ResponseEntity<AssignmentMark> saveAssignment(@PathVariable Long id, @RequestBody AssignmentMark assignmentMark) {
+        assignmentMark.setStudentId(id);
+        return new ResponseEntity<>(assignmentMarkRepository.save(assignmentMark), HttpStatus.CREATED);
+    }
+
     @PostMapping("/attendance")
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
     public ResponseEntity<Void> saveAttendance(
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody List<AttendanceDTO> attendanceList) {
-        String markedBy = getUsernameFromToken();
-        attendanceService.saveAttendance(date, attendanceList, markedBy);
+        attendanceService.saveAttendance(date, attendanceList);
         return ResponseEntity.ok().build();
     }
 
@@ -211,7 +192,6 @@ public class StudentController {
             dto.setRank(ranking.getRank());
             dto.setClassName(student.getClassName());
             dto.setSection(student.getSection());
-            dto.setBranch(student.getBranch());
 
             boolean isSelf = selfStudent.isPresent() && student.getId().equals(selfStudent.get().getId());
             dto.setIsSelf(isSelf);
@@ -231,7 +211,6 @@ public class StudentController {
                     dto.setRollNumber("*****");
                     dto.setClassName("*****");
                     dto.setSection("*****");
-                    dto.setBranch("*****");
                     dto.setTotalMarks(null);
                     dto.setPercentage(null);
                 }
@@ -246,6 +225,51 @@ public class StudentController {
             result.add(dto);
         }
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{id}/performance")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
+    public ResponseEntity<StudentPerformanceDTO> getStudentPerformance(@PathVariable Long id) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new com.varsha.studentservice.exception.ResourceNotFoundException("Student profile not found for id: " + id));
+
+        if ("Deleted".equals(student.getStatus())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Optional<Ranking> rankingOpt = rankingRepository.findByStudentId(student.getId());
+        Integer rank = rankingOpt.map(Ranking::getRank).orElse(null);
+        Double totalMarks = rankingOpt.map(Ranking::getTotalMarks).orElse(0.0);
+        Double percentage = rankingOpt.map(Ranking::getPercentage).orElse(0.0);
+
+        List<Mark> marks = markRepository.findByStudentId(student.getId());
+        List<MarkDTO> markDTOs = marks.stream()
+                .map(m -> new MarkDTO(m.getSubject(), m.getMarks()))
+                .collect(Collectors.toList());
+
+        long totalAttendance = attendanceRepository.countByStudentId(student.getId());
+        long presentDays = attendanceRepository.countByStudentIdAndStatus(student.getId(), "PRESENT");
+        long absentDays = attendanceRepository.countByStudentIdAndStatus(student.getId(), "ABSENT");
+        double attendanceRate = totalAttendance > 0 ? ((double) presentDays / totalAttendance) * 100.0 : 100.0;
+
+        StudentDTO studentDTO = new StudentDTO();
+        studentDTO.setId(student.getId());
+        studentDTO.setFirstName(student.getFirstName());
+        studentDTO.setLastName(student.getLastName());
+        studentDTO.setEmail(student.getEmail());
+        studentDTO.setRollNumber(student.getRollNumber());
+        studentDTO.setClassName(student.getClassName());
+        studentDTO.setSection(student.getSection());
+        studentDTO.setPhoneNumber(student.getPhoneNumber());
+        studentDTO.setStatus(student.getStatus());
+        studentDTO.setEnrollmentDate(student.getEnrollmentDate());
+        studentDTO.setUserId(student.getUserId());
+
+        StudentPerformanceDTO dto = new StudentPerformanceDTO(
+                studentDTO, rank, totalMarks, percentage, markDTOs,
+                totalAttendance, presentDays, absentDays, attendanceRate
+        );
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/my-performance")
@@ -286,12 +310,10 @@ public class StudentController {
         studentDTO.setRollNumber(student.getRollNumber());
         studentDTO.setClassName(student.getClassName());
         studentDTO.setSection(student.getSection());
-        studentDTO.setBranch(student.getBranch());
         studentDTO.setPhoneNumber(student.getPhoneNumber());
         studentDTO.setStatus(student.getStatus());
         studentDTO.setEnrollmentDate(student.getEnrollmentDate());
         studentDTO.setUserId(student.getUserId());
-        studentDTO.setCounselorUsername(student.getCounselorUsername());
 
         StudentPerformanceDTO dto = new StudentPerformanceDTO(
                 studentDTO, rank, totalMarks, percentage, markDTOs,
@@ -300,87 +322,12 @@ public class StudentController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping("/my-batch-peers")
-    @PreAuthorize("hasAuthority('ROLE_STUDENT')")
-    public ResponseEntity<List<StudentDTO>> getMyBatchPeers() {
-        String selfEmail = getEmailFromToken();
-        if (selfEmail == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        Student student = studentRepository.findByEmail(selfEmail)
-                .orElseThrow(() -> new com.varsha.studentservice.exception.ResourceNotFoundException("Student profile not found for email: " + selfEmail));
-
-        if ("Deleted".equals(student.getStatus())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        String counselor = student.getCounselorUsername();
-        if (counselor == null) {
-            return ResponseEntity.ok(Collections.emptyList());
-        }
-
-        List<Student> peers = studentRepository.findByCounselorUsernameAndClassNameAndBranchAndSection(
-                counselor, student.getClassName(), student.getBranch(), student.getSection()
-        );
-
-        List<StudentDTO> peerDTOs = peers.stream()
-                .filter(s -> !s.getEmail().equalsIgnoreCase(selfEmail) && !"Deleted".equals(s.getStatus()))
-                .map(s -> {
-                    StudentDTO d = new StudentDTO();
-                    d.setId(s.getId());
-                    d.setFirstName(s.getFirstName());
-                    d.setLastName(s.getLastName());
-                    d.setEmail(s.getEmail());
-                    d.setRollNumber(s.getRollNumber());
-                    d.setClassName(s.getClassName());
-                    d.setSection(s.getSection());
-                    d.setBranch(s.getBranch());
-                    d.setPhoneNumber(s.getPhoneNumber());
-                    d.setStatus(s.getStatus());
-                    d.setCounselorUsername(s.getCounselorUsername());
-                    d.setEnrollmentDate(s.getEnrollmentDate());
-                    return d;
-                })
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(peerDTOs);
-    }
-
     @GetMapping("/dashboard-summary")
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
-    public ResponseEntity<DashboardSummaryDTO> getDashboardSummary(
-            @RequestParam(value = "branch", required = false) String branch,
-            @RequestParam(value = "sections", required = false) List<String> sections,
-            @RequestParam(value = "counselorUsername", required = false) String counselorUsername) {
+    public ResponseEntity<DashboardSummaryDTO> getDashboardSummary() {
         String token = request.getHeader("Authorization");
         
-        List<Student> activeStudents = studentRepository.findByStatusNot("Deleted");
-        
-        // Filter by branch
-        if (branch != null && !branch.trim().isEmpty() && !"All".equalsIgnoreCase(branch)) {
-            final String br = branch.trim();
-            activeStudents = activeStudents.stream()
-                    .filter(s -> s.getBranch() != null && s.getBranch().equalsIgnoreCase(br))
-                    .collect(Collectors.toList());
-        }
-        
-        // Filter by sections (multi-select)
-        if (sections != null && !sections.isEmpty() && !sections.contains("All")) {
-            activeStudents = activeStudents.stream()
-                    .filter(s -> s.getSection() != null && sections.stream().anyMatch(sec -> sec.equalsIgnoreCase(s.getSection())))
-                    .collect(Collectors.toList());
-        }
-
-        // Filter by counselor
-        if (counselorUsername != null && !counselorUsername.trim().isEmpty()) {
-            final String cu = counselorUsername.trim();
-            activeStudents = activeStudents.stream()
-                    .filter(s -> s.getCounselorUsername() != null && s.getCounselorUsername().equalsIgnoreCase(cu))
-                    .collect(Collectors.toList());
-        }
-
-        long totalStudents = activeStudents.size();
+        long totalStudents = studentRepository.findByStatusNot("Deleted").size();
         long totalTeachers = 0;
         long totalCounselors = 0;
         
@@ -396,6 +343,7 @@ public class StudentController {
 
         long totalCsv = csvUploadRepository.count();
 
+        List<Student> activeStudents = studentRepository.findByStatusNot("Deleted");
         double overallAttendanceRate = 100.0;
         long totalPresentCount = 0;
         long totalAttendanceCount = 0;
@@ -431,28 +379,10 @@ public class StudentController {
                 continue;
             }
             Student student = studentOpt.get();
-            
-            // Apply filters to top performers
-            if (branch != null && !branch.trim().isEmpty() && !"All".equalsIgnoreCase(branch)) {
-                if (student.getBranch() == null || !student.getBranch().equalsIgnoreCase(branch.trim())) {
-                    continue;
-                }
-            }
-            if (sections != null && !sections.isEmpty() && !sections.contains("All")) {
-                if (student.getSection() == null || sections.stream().noneMatch(sec -> sec.equalsIgnoreCase(student.getSection()))) {
-                    continue;
-                }
-            }
-            if (counselorUsername != null && !counselorUsername.trim().isEmpty()) {
-                if (student.getCounselorUsername() == null || !student.getCounselorUsername().equalsIgnoreCase(counselorUsername.trim())) {
-                    continue;
-                }
-            }
-
             StudentRankingDTO dto = new StudentRankingDTO(
                     student.getId(), ranking.getRank(), student.getRollNumber(),
                     student.getFirstName(), student.getLastName(), student.getEmail(),
-                    student.getClassName(), student.getSection(), student.getBranch(), ranking.getTotalMarks(),
+                    student.getClassName(), student.getSection(), ranking.getTotalMarks(),
                     ranking.getPercentage(), false
             );
             topPerformers.add(dto);
@@ -465,69 +395,4 @@ public class StudentController {
         );
         return ResponseEntity.ok(summary);
     }
-
-    @PutMapping("/my-profile")
-    @PreAuthorize("hasAuthority('ROLE_STUDENT')")
-    public ResponseEntity<StudentDTO> updateMyProfile(@RequestBody Map<String, String> body) {
-        String email = getEmailFromToken();
-        if (email == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        Student student = studentRepository.findByEmail(email)
-                .orElseThrow(() -> new com.varsha.studentservice.exception.ResourceNotFoundException("Student profile not found for email: " + email));
-
-        if ("Deleted".equals(student.getStatus())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        String newPhoneNumber = body.get("phoneNumber");
-        if (newPhoneNumber != null) {
-            student.setPhoneNumber(newPhoneNumber);
-        }
-
-        String newEmail = body.get("email");
-        if (newEmail != null && !newEmail.trim().isEmpty() && !newEmail.equalsIgnoreCase(student.getEmail())) {
-            if (studentRepository.findByEmail(newEmail).isPresent()) {
-                throw new com.varsha.studentservice.exception.BadRequestException("Email is already in use by another student.");
-            }
-            student.setEmail(newEmail);
-        }
-
-        studentRepository.save(student);
-
-        StudentDTO dto = new StudentDTO();
-        dto.setId(student.getId());
-        dto.setFirstName(student.getFirstName());
-        dto.setLastName(student.getLastName());
-        dto.setEmail(student.getEmail());
-        dto.setRollNumber(student.getRollNumber());
-        dto.setClassName(student.getClassName());
-        dto.setSection(student.getSection());
-        dto.setBranch(student.getBranch());
-        dto.setPhoneNumber(student.getPhoneNumber());
-        dto.setStatus(student.getStatus());
-        dto.setEnrollmentDate(student.getEnrollmentDate());
-        dto.setUserId(student.getUserId());
-        dto.setCounselorUsername(student.getCounselorUsername());
-
-        return ResponseEntity.ok(dto);
-    }
-
-    @PostMapping("/wipe-database")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Map<String, String>> wipeDatabase() {
-        counselingAppointmentRepository.deleteAll();
-        counselorOffDateRepository.deleteAll();
-        interventionRepository.deleteAll();
-        attendanceRepository.deleteAll();
-        markRepository.deleteAll();
-        rankingRepository.deleteAll();
-        csvUploadRepository.deleteAll();
-        studentRepository.deleteAll();
-
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Entire student database has been successfully wiped.");
-        return ResponseEntity.ok(response);
-    }
 }
-

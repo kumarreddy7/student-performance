@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/student_performance_students
     username: postgres
-    password: varsha27
+    password: 
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -15,9 +15,6 @@ spring:
     show-sql: true
 
 eureka:
-  instance:
-    prefer-ip-address: true
-    ip-address: 127.0.0.1
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/

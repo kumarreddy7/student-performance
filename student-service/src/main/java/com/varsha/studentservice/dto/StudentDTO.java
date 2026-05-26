@@ -28,12 +28,8 @@ public class StudentDTO {
     @NotBlank(message = "Section is mandatory")
     private String section;
 
-    @NotBlank(message = "Branch is mandatory")
-    private String branch;
-
     private String phoneNumber;
     private String status;
-    private String counselorUsername;
 
     private LocalDate enrollmentDate;
     private Long userId;

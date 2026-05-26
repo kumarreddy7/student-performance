@@ -15,7 +15,5 @@ public class AttendanceRecordDTO {
     private String rollNumber;
     private String className;
     private String section;
-    private String branch;
     private String status; // "PRESENT", "ABSENT", or null if not marked yet
-    private String markedBy;
 }

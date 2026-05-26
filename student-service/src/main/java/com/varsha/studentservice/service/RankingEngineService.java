@@ -48,7 +48,7 @@ public class RankingEngineService {
         // Sort candidates descending by totalMarks
         candidates.sort((c1, c2) -> Double.compare(c2.totalMarks, c1.totalMarks));
 
-        Set<Long> rankedStudentIds = new HashSet<>();
+        List<Ranking> rankingsToSave = new ArrayList<>();
         int currentRank = 1;
         double previousScore = -1.0;
 
@@ -59,20 +59,19 @@ public class RankingEngineService {
             }
             previousScore = candidate.totalMarks;
 
-            Ranking ranking = rankingRepository.findByStudentId(candidate.studentId)
-                    .orElseGet(Ranking::new);
+            Ranking ranking = new Ranking();
             ranking.setStudentId(candidate.studentId);
             ranking.setRank(currentRank);
             ranking.setTotalMarks(candidate.totalMarks);
             ranking.setPercentage(candidate.percentage);
-            rankingRepository.save(ranking);
-            rankedStudentIds.add(candidate.studentId);
+            rankingsToSave.add(ranking);
         }
 
-        // Remove rankings for students no longer active
-        rankingRepository.findAll().stream()
-                .filter(r -> !rankedStudentIds.contains(r.getStudentId()))
-                .forEach(rankingRepository::delete);
+        // Purge old rankings and save new
+        rankingRepository.deleteAll();
+        if (!rankingsToSave.isEmpty()) {
+            rankingRepository.saveAll(rankingsToSave);
+        }
     }
 
     private static class RankingCandidate {

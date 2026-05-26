@@ -46,17 +46,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex, WebRequest request) {
-        ErrorResponse message = new ErrorResponse(
-                new Date(),
-                HttpStatus.UNAUTHORIZED.value(),
-                "Unauthorized",
-                "Invalid username or password",
-                request.getDescription(false));
-        return new ResponseEntity<>(message, HttpStatus.UNAUTHORIZED);
-    }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) {
         ErrorResponse message = new ErrorResponse(

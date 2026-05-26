@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStudentStore } from '../../features/students/studentStore';
-import { UploadCloud, FileSpreadsheet, Download, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, Trash2, Download, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { CircularProgress } from '@mui/material';
 import api from '../../lib/axios';
 
 export default function CSVManagement() {
-  const { uploadCsv, uploadMarksCsv, fetchCsvLogs } = useStudentStore();
+  const { uploadCsv, uploadMarksCsv, fetchCsvLogs, deleteCsv } = useStudentStore();
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   
@@ -43,18 +43,13 @@ export default function CSVManagement() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
-      setStudentValStatus({ status: 'invalid', error: 'File must have a .csv or .xlsx extension.' });
+    if (!file.name.endsWith('.csv')) {
+      setStudentValStatus({ status: 'invalid', error: 'File must have a .csv extension.' });
       setStudentFile(null);
       return;
     }
 
     setStudentFile(file);
-    if (file.name.endsWith('.xlsx')) {
-      setStudentValStatus({ status: 'valid' });
-      return;
-    }
-
     setStudentValStatus({ status: 'validating' });
     
     // Read headers to validate structure
@@ -85,18 +80,13 @@ export default function CSVManagement() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
-      setMarksValStatus({ status: 'invalid', error: 'File must have a .csv or .xlsx extension.' });
+    if (!file.name.endsWith('.csv')) {
+      setMarksValStatus({ status: 'invalid', error: 'File must have a .csv extension.' });
       setMarksFile(null);
       return;
     }
 
     setMarksFile(file);
-    if (file.name.endsWith('.xlsx')) {
-      setMarksValStatus({ status: 'valid' });
-      return;
-    }
-
     setMarksValStatus({ status: 'validating' });
 
     // Read headers to validate structure
@@ -176,6 +166,16 @@ export default function CSVManagement() {
     }
   };
 
+  const deleteLog = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this file log from history?')) return;
+    try {
+      await deleteCsv(id);
+      loadLogs();
+    } catch (error) {
+      console.error('Failed to delete log', error);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -226,11 +226,11 @@ export default function CSVManagement() {
                 ref={studentFileRef} 
                 onChange={handleStudentFileChange} 
                 className="hidden" 
-                accept=".csv,.xlsx"
+                accept=".csv"
               />
               <UploadCloud className="h-8 w-8 text-gray-400 mb-2" />
               <p className="text-sm font-medium text-gray-700">
-                {studentFile ? studentFile.name : 'Select student roster file (CSV or Excel)'}
+                {studentFile ? studentFile.name : 'Select student roster CSV file'}
               </p>
               <p className="text-xs text-gray-400 mt-1">Accepts: rollNumber, name, email, class, section, phone</p>
             </div>
@@ -289,11 +289,11 @@ export default function CSVManagement() {
                 ref={marksFileRef} 
                 onChange={handleMarksFileChange} 
                 className="hidden" 
-                accept=".csv,.xlsx"
+                accept=".csv"
               />
               <UploadCloud className="h-8 w-8 text-gray-400 mb-2" />
               <p className="text-sm font-medium text-gray-700">
-                {marksFile ? marksFile.name : 'Select academic marks file (CSV or Excel)'}
+                {marksFile ? marksFile.name : 'Select academic marks CSV file'}
               </p>
               <p className="text-xs text-gray-400 mt-1">Required columns: Roll Number, Subject, Marks</p>
             </div>
@@ -388,10 +388,17 @@ export default function CSVManagement() {
                     <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
                       <button
                         onClick={() => downloadFile(log.id, log.fileName)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-purple-650 hover:bg-purple-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
                         title="Download CSV"
                       >
                         <Download className="h-4.5 w-4.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteLog(log.id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Delete Log"
+                      >
+                        <Trash2 className="h-4.5 w-4.5" />
                       </button>
                     </td>
                   </tr>

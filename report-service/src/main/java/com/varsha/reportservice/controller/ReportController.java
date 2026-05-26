@@ -18,13 +18,9 @@ public class ReportController {
 
     @GetMapping("/watchlist/pdf")
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
-    public ResponseEntity<byte[]> downloadWatchlistPdf(
-            @RequestParam(value = "branch", required = false) String branch,
-            @RequestParam(value = "sections", required = false) java.util.List<String> sections,
-            @RequestParam(value = "counselorUsername", required = false) String counselorUsername,
-            HttpServletRequest request) {
+    public ResponseEntity<byte[]> downloadWatchlistPdf(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
-        byte[] pdfBytes = reportService.generateWatchlistPdf(token, branch, sections, counselorUsername);
+        byte[] pdfBytes = reportService.generateWatchlistPdf(token);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
@@ -37,13 +33,9 @@ public class ReportController {
 
     @GetMapping("/watchlist/excel")
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_TEACHER') or hasAuthority('ROLE_COUNSELOR')")
-    public ResponseEntity<byte[]> downloadWatchlistExcel(
-            @RequestParam(value = "branch", required = false) String branch,
-            @RequestParam(value = "sections", required = false) java.util.List<String> sections,
-            @RequestParam(value = "counselorUsername", required = false) String counselorUsername,
-            HttpServletRequest request) {
+    public ResponseEntity<byte[]> downloadWatchlistExcel(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
-        byte[] excelBytes = reportService.generateWatchlistExcel(token, branch, sections, counselorUsername);
+        byte[] excelBytes = reportService.generateWatchlistExcel(token);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));

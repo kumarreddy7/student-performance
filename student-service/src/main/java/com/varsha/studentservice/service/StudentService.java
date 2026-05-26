@@ -30,23 +30,53 @@ public class StudentService {
     @Autowired
     private RankingEngineService rankingEngineService;
 
+    @Autowired
+    private com.varsha.studentservice.repository.TeacherClassRepository teacherClassRepository;
+
     public List<StudentDTO> getAllStudents() {
-        return studentRepository.findByStatusNot("Deleted").stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-    }
-
-    public List<StudentDTO> getStudentsByCounselor(String counselorUsername) {
-        return studentRepository.findByStatusNotAndCounselorUsername("Deleted", counselorUsername).stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-    }
-
-    public Page<StudentDTO> getStudentsPaged(String search, String counselorUsername, Pageable pageable) {
-        if (counselorUsername != null) {
-            return studentRepository.searchStudentsWithCounselor("Deleted", counselorUsername, search, pageable)
-                    .map(this::mapToDTO);
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        List<Student> students;
+        
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()))) {
+            String email = auth.getName();
+            List<com.varsha.studentservice.entity.TeacherClass> classes = teacherClassRepository.findByTeacherEmail(email);
+            
+            students = studentRepository.findByStatusNot("Deleted").stream()
+                    .filter(s -> classes.stream().anyMatch(c -> 
+                            c.getClassName().equalsIgnoreCase(s.getClassName()) && 
+                            c.getSection().equalsIgnoreCase(s.getSection())))
+                    .collect(Collectors.toList());
+        } else {
+            students = studentRepository.findByStatusNot("Deleted");
         }
+        
+        return students.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public Page<StudentDTO> getStudentsPaged(String search, Pageable pageable) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()))) {
+            String email = auth.getName();
+            List<com.varsha.studentservice.entity.TeacherClass> classes = teacherClassRepository.findByTeacherEmail(email);
+            
+            List<StudentDTO> list = studentRepository.searchStudents("Deleted", search, Pageable.unpaged()).stream()
+                    .filter(s -> classes.stream().anyMatch(c -> 
+                            c.getClassName().equalsIgnoreCase(s.getClassName()) && 
+                            c.getSection().equalsIgnoreCase(s.getSection())))
+                    .map(this::mapToDTO)
+                    .collect(Collectors.toList());
+            
+            int start = (int) pageable.getOffset();
+            if (start > list.size()) {
+                return new org.springframework.data.domain.PageImpl<>(new java.util.ArrayList<>(), pageable, list.size());
+            }
+            int end = Math.min((start + pageable.getPageSize()), list.size());
+            return new org.springframework.data.domain.PageImpl<>(list.subList(start, end), pageable, list.size());
+        }
+        
         return studentRepository.searchStudents("Deleted", search, pageable)
                 .map(this::mapToDTO);
     }
@@ -101,9 +131,7 @@ public class StudentService {
         student.setRollNumber(studentDTO.getRollNumber());
         student.setClassName(studentDTO.getClassName());
         student.setSection(studentDTO.getSection());
-        student.setBranch(studentDTO.getBranch());
         student.setPhoneNumber(studentDTO.getPhoneNumber());
-        student.setCounselorUsername(studentDTO.getCounselorUsername());
         if (studentDTO.getStatus() != null) {
             student.setStatus(studentDTO.getStatus());
         }
@@ -174,9 +202,7 @@ public class StudentService {
         dto.setRollNumber(student.getRollNumber());
         dto.setClassName(student.getClassName());
         dto.setSection(student.getSection());
-        dto.setBranch(student.getBranch());
         dto.setPhoneNumber(student.getPhoneNumber());
-        dto.setCounselorUsername(student.getCounselorUsername());
         dto.setStatus(student.getStatus());
         dto.setEnrollmentDate(student.getEnrollmentDate());
         dto.setUserId(student.getUserId());
@@ -191,40 +217,10 @@ public class StudentService {
         student.setRollNumber(dto.getRollNumber());
         student.setClassName(dto.getClassName());
         student.setSection(dto.getSection());
-        student.setBranch(dto.getBranch());
         student.setPhoneNumber(dto.getPhoneNumber());
-        student.setCounselorUsername(dto.getCounselorUsername());
         student.setStatus(dto.getStatus() != null ? dto.getStatus() : "Active");
         student.setEnrollmentDate(dto.getEnrollmentDate());
         student.setUserId(dto.getUserId());
         return student;
-    }
-
-    @Transactional
-    public void allocateCounselor(Long id, String counselorUsername) {
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with id " + id));
-        if ("Deleted".equals(student.getStatus())) {
-            throw new BadRequestException("Cannot update a deleted student");
-        }
-        
-        if (counselorUsername != null && !counselorUsername.trim().isEmpty()) {
-            List<Student> assignedStudents = studentRepository.findByStatusNotAndCounselorUsername("Deleted", counselorUsername);
-            if (assignedStudents != null && !assignedStudents.isEmpty()) {
-                String counselorBranch = null;
-                for (Student s : assignedStudents) {
-                    if (s.getBranch() != null && !s.getBranch().trim().isEmpty()) {
-                        counselorBranch = s.getBranch();
-                        break;
-                    }
-                }
-                if (counselorBranch != null && student.getBranch() != null && !counselorBranch.equalsIgnoreCase(student.getBranch())) {
-                    throw new BadRequestException("Strict Validation: Counselor '" + counselorUsername + "' handles the '" + counselorBranch + "' branch. You cannot allocate them to a student in the '" + student.getBranch() + "' branch.");
-                }
-            }
-        }
-        
-        student.setCounselorUsername(counselorUsername);
-        studentRepository.save(student);
     }
 }

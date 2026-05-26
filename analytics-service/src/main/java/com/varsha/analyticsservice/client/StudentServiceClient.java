@@ -16,4 +16,10 @@ public interface StudentServiceClient {
 
     @GetMapping("/api/students")
     List<StudentDTO> getAllStudents(@RequestHeader("Authorization") String token);
+
+    @GetMapping("/api/students/{id}/assignments")
+    List<com.varsha.analyticsservice.dto.AssignmentMarkDTO> getAssignments(@RequestHeader("Authorization") String token, @PathVariable("id") Long id);
+
+    @GetMapping("/api/students/{id}/performance")
+    com.varsha.analyticsservice.dto.StudentPerformanceDTO getStudentPerformance(@RequestHeader("Authorization") String token, @PathVariable("id") Long id);
 }

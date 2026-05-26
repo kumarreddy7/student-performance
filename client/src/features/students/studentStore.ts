@@ -33,7 +33,7 @@ interface StudentState {
   deleteCsv: (id: number) => Promise<void>;
   fetchRankings: () => Promise<any[]>;
   fetchMyPerformance: () => Promise<any>;
-  fetchDashboardSummary: (branch?: string, sections?: string[], counselorUsername?: string) => Promise<any>;
+  fetchDashboardSummary: () => Promise<any>;
   fetchAttendance: (date: string) => Promise<any[]>;
   saveAttendance: (date: string, records: any[]) => Promise<void>;
   fetchAttendanceStats: (date: string) => Promise<any>;
@@ -209,23 +209,9 @@ export const useStudentStore = create<StudentState>((set) => ({
     }
   },
 
-  fetchDashboardSummary: async (branch?: string, sections?: string[], counselorUsername?: string) => {
+  fetchDashboardSummary: async () => {
     try {
-      let url = '/students/dashboard-summary';
-      const params: string[] = [];
-      if (branch && branch !== 'All' && branch.trim() !== '') {
-        params.push(`branch=${encodeURIComponent(branch)}`);
-      }
-      if (sections && sections.length > 0 && !sections.includes('All')) {
-        params.push(`sections=${sections.map(s => encodeURIComponent(s)).join(',')}`);
-      }
-      if (counselorUsername && counselorUsername.trim() !== '') {
-        params.push(`counselorUsername=${encodeURIComponent(counselorUsername)}`);
-      }
-      if (params.length > 0) {
-        url += `?${params.join('&')}`;
-      }
-      const response = await api.get(url);
+      const response = await api.get('/students/dashboard-summary');
       return response.data;
     } catch (error: any) {
       throw error;

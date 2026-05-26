@@ -16,7 +16,6 @@ public class StudentRankingDTO {
     private String email;
     private String className;
     private String section;
-    private String branch;
     private Double totalMarks;
     private Double percentage;
     private Boolean isSelf;

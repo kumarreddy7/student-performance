@@ -3,15 +3,13 @@ import { useStudentStore } from '../../features/students/studentStore';
 import { Search, Trophy, FileDown, ArrowUpDown, RefreshCw, Star } from 'lucide-react';
 import { CircularProgress } from '@mui/material';
 import { useAuthStore } from '../../features/auth/authStore';
-import { normalizeRole } from '../../lib/roles';
-import { getTeacherClassAssignment } from '../../lib/roleSecurity';
-import api from '../../lib/axios';
 
 type SortKey = 'rank' | 'name' | 'totalMarks' | 'percentage';
 type SortOrder = 'asc' | 'desc';
 
 export default function Rankings() {
   const { fetchRankings } = useStudentStore();
+  const { anonymize } = useAuthStore();
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -27,28 +25,8 @@ export default function Rankings() {
   const loadRankings = async () => {
     setLoading(true);
     try {
-      const user = useAuthStore.getState().user;
-      const role = normalizeRole(user?.role);
       const data = await fetchRankings();
-      
-      let filtered = data || [];
-      if (role === 'teacher') {
-        const tc = getTeacherClassAssignment(user?.username);
-        filtered = (data || []).filter((r: any) => 
-          r.className && r.className.toLowerCase() === tc.className.toLowerCase() &&
-          r.branch && r.branch.toLowerCase() === tc.branch.toLowerCase() &&
-          r.section && r.section.toLowerCase() === tc.section.toLowerCase()
-        );
-      } else if (role === 'counselor') {
-        const studRes = await api.get('/students');
-        const myStudents = (studRes.data || []).filter((s: any) => 
-          s.counselorUsername && s.counselorUsername.toLowerCase() === user?.username.toLowerCase() && s.status !== 'Deleted'
-        );
-        const myStudentRolls = new Set(myStudents.map((s: any) => s.rollNumber.toLowerCase()));
-        filtered = (data || []).filter((r: any) => r.rollNumber && myStudentRolls.has(r.rollNumber.toLowerCase()));
-      }
-      
-      setRankings(filtered);
+      setRankings(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -105,8 +83,8 @@ export default function Rankings() {
     const headers = ['Rank', 'Roll Number', 'Student Name', 'Class', 'Section', 'Total Marks', 'Percentage'];
     const rows = sortedRankings.map(item => [
       item.rank,
-      item.rollNumber,
-      `${item.firstName} ${item.lastName}`,
+      anonymize ? `ST-${item.studentId}` : item.rollNumber,
+      anonymize ? `STUDENT_ST-${item.studentId}` : `${item.firstName} ${item.lastName}`,
       item.className,
       item.section,
       item.totalMarks !== null ? item.totalMarks.toFixed(1) : 'N/A',
@@ -269,8 +247,12 @@ export default function Rankings() {
                           <span className="text-gray-500 ml-3 font-medium">{item.rank}</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-gray-600 font-mono text-xs">{item.rollNumber}</td>
-                      <td className="px-6 py-4 text-gray-900">{item.firstName} {item.lastName}</td>
+                      <td className="px-6 py-4 text-gray-600 font-mono text-xs">
+                        {anonymize ? `ST-${item.studentId}` : item.rollNumber}
+                      </td>
+                      <td className="px-6 py-4 text-gray-900">
+                        {anonymize ? `STUDENT_ST-${item.studentId}` : `${item.firstName} ${item.lastName}`}
+                      </td>
                       <td className="px-6 py-4 text-gray-600">{item.className}</td>
                       <td className="px-6 py-4 text-gray-600">{item.section}</td>
                       <td className="px-6 py-4 text-right font-semibold text-indigo-600">

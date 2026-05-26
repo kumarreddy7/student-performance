@@ -1,6 +1,6 @@
 import { useAuthStore } from '../features/auth/authStore';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Menu, Search } from 'lucide-react';
+import { LogOut, User, Menu, Search, Eye, EyeOff } from 'lucide-react';
 import { IconButton } from '@mui/material';
 import { useStudentStore } from '../features/students/studentStore';
 
@@ -9,7 +9,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ handleDrawerToggle }: NavbarProps) {
-  const { user, logout } = useAuthStore();
+  const { user, logout, anonymize, toggleAnonymize } = useAuthStore();
   const { searchQuery, setSearchQuery } = useStudentStore();
   const navigate = useNavigate();
 
@@ -43,17 +43,35 @@ export default function Navbar({ handleDrawerToggle }: NavbarProps) {
           </div>
           
           <div className="flex items-center gap-3 sm:gap-5">
-
-            <div 
-              onClick={() => navigate('/profile')}
-              className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-all group"
-              title="View Profile"
+            {/* Anonymize Mode Toggle Switch */}
+            <button
+              onClick={toggleAnonymize}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-300 text-xs font-bold shadow-sm ${
+                anonymize 
+                  ? 'bg-purple-600 border-purple-500 text-white hover:bg-purple-700' 
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              title={anonymize ? "Disable Anonymization (FERPA compliance)" : "Enable Anonymization (FERPA compliance)"}
             >
+              {anonymize ? (
+                <>
+                  <EyeOff className="h-4 w-4 animate-pulse" />
+                  <span className="hidden md:inline">Anonymized</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4" />
+                  <span className="hidden md:inline">Anonymize</span>
+                </>
+              )}
+            </button>
+
+            <div className="flex items-center gap-3">
               <div className="hidden sm:flex flex-col items-end">
-                <span className="text-sm font-semibold text-gray-700 leading-tight group-hover:text-purple-600 transition-colors">{user?.username}</span>
-                <span className="text-xs text-gray-500 capitalize">{user?.role}</span>
+                <span className="text-sm font-semibold text-gray-700 leading-tight">{user?.username}</span>
+                <span className="text-xs text-gray-500">{user?.role}</span>
               </div>
-              <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-purple-600 to-purple-400 flex items-center justify-center shadow-sm text-white font-semibold text-sm group-hover:scale-105 transition-all duration-200">
+              <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-purple-600 to-purple-400 flex items-center justify-center shadow-sm text-white font-semibold text-sm">
                 {user?.username?.charAt(0).toUpperCase() || <User className="h-5 w-5" />}
               </div>
             </div>

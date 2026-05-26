@@ -4,39 +4,24 @@ import api from '../../lib/axios';
 interface ReportState {
   isGenerating: boolean;
   error: string | null;
-  downloadWatchlistPdf: (branch?: string, sections?: string[], counselorUsername?: string) => Promise<void>;
-  downloadWatchlistExcel: (branch?: string, sections?: string[], counselorUsername?: string) => Promise<void>;
+  downloadWatchlistPdf: () => Promise<void>;
+  downloadWatchlistExcel: () => Promise<void>;
 }
 
 export const useReportStore = create<ReportState>((set) => ({
   isGenerating: false,
   error: null,
 
-  downloadWatchlistPdf: async (branch?, sections?, counselorUsername?) => {
+  downloadWatchlistPdf: async () => {
     set({ isGenerating: true, error: null });
     try {
-      let url = '/reports/watchlist/pdf';
-      const params: string[] = [];
-      if (branch && branch !== 'All' && branch.trim() !== '') {
-        params.push(`branch=${encodeURIComponent(branch)}`);
-      }
-      if (sections && sections.length > 0 && !sections.includes('All')) {
-        params.push(`sections=${sections.map(s => encodeURIComponent(s)).join(',')}`);
-      }
-      if (counselorUsername && counselorUsername.trim() !== '') {
-        params.push(`counselorUsername=${encodeURIComponent(counselorUsername)}`);
-      }
-      if (params.length > 0) {
-        url += `?${params.join('&')}`;
-      }
-
-      const response = await api.get(url, {
+      const response = await api.get('/reports/watchlist/pdf', {
         responseType: 'blob',
       });
       
-      const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = urlBlob;
+      link.href = url;
       link.setAttribute('download', 'watchlist.pdf');
       document.body.appendChild(link);
       link.click();
@@ -51,31 +36,16 @@ export const useReportStore = create<ReportState>((set) => ({
     }
   },
 
-  downloadWatchlistExcel: async (branch?, sections?, counselorUsername?) => {
+  downloadWatchlistExcel: async () => {
     set({ isGenerating: true, error: null });
     try {
-      let url = '/reports/watchlist/excel';
-      const params: string[] = [];
-      if (branch && branch !== 'All' && branch.trim() !== '') {
-        params.push(`branch=${encodeURIComponent(branch)}`);
-      }
-      if (sections && sections.length > 0 && !sections.includes('All')) {
-        params.push(`sections=${sections.map(s => encodeURIComponent(s)).join(',')}`);
-      }
-      if (counselorUsername && counselorUsername.trim() !== '') {
-        params.push(`counselorUsername=${encodeURIComponent(counselorUsername)}`);
-      }
-      if (params.length > 0) {
-        url += `?${params.join('&')}`;
-      }
-
-      const response = await api.get(url, {
+      const response = await api.get('/reports/watchlist/excel', {
         responseType: 'blob',
       });
       
-      const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = urlBlob;
+      link.href = url;
       link.setAttribute('download', 'watchlist.xlsx');
       document.body.appendChild(link);
       link.click();

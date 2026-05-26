@@ -1,57 +1,22 @@
-# OS-specific files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# IDEs and Editors
-.idea/
-*.iml
-*.ipr
-*.iws
-.settings/
-.classpath
-.project
-.factorypath
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Keep VS Code launch & task configurations shared, ignore other vscode settings
-.vscode/*
-!.vscode/launch.json
-!.vscode/tasks.json
-
-# Java / Maven build files
+# Maven build outputs
 **/target/
-*.jar
-*.war
-*.ear
-.mvn/wrapper/maven-wrapper.jar
+target/
 
-# Node / Frontend build files
+# Node modules and build outputs
 **/node_modules/
+node_modules/
 **/dist/
-**/build/
-.npm
-.eslintcache
+dist/
 
-# Logs and databases
-*.log
-logs/
+# Log files
 **/logs/
-*.db
-*.sqlite
+logs/
+*.log
+npm-debug.log*
 
-# Environment variables and secrets
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.pem
+# IDE and System files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

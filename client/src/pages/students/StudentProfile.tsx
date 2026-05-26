@@ -25,7 +25,7 @@ export default function StudentProfile() {
   const navigate = useNavigate();
   const { generateRiskScore } = useAnalyticsStore();
   const { deleteStudent } = useStudentStore();
-  const user = useAuthStore((state) => state.user);
+  const { user, anonymize } = useAuthStore();
   const isAuthorized = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'counselor';
   
   const [data, setData] = useState<any>(null);
@@ -39,27 +39,6 @@ export default function StudentProfile() {
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  // Counselor allocation states
-  const [counselors, setCounselors] = useState<any[]>([]);
-  const [selectedCounselor, setSelectedCounselor] = useState<string>('');
-  const [updatingCounselor, setUpdatingCounselor] = useState<boolean>(false);
-  const [toastMsg, setToastMsg] = useState<string>('');
-  const [isReallocateDialogOpen, setIsReallocateDialogOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      api.get('/auth/counselors')
-        .then(res => {
-          const uniqueCounselors = (res.data || []).filter(
-            (c: any, index: number, self: any[]) =>
-              self.findIndex((t: any) => t.username === c.username) === index
-          );
-          setCounselors(uniqueCounselors);
-        })
-        .catch(err => console.error('Failed to fetch counselors list', err));
-    }
-  }, [user]);
 
   const handleDeleteConfirm = async () => {
     setDeleting(true);
@@ -77,17 +56,8 @@ export default function StudentProfile() {
   const fetchStudentAnalytics = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, studentRes] = await Promise.all([
-        api.get(`/analytics/student/${id}`),
-        api.get(`/students/${id}`)
-      ]);
-      setData({
-        student: studentRes.data,
-        history: analyticsRes.data.history
-      });
-      if (studentRes.data?.counselorUsername) {
-        setSelectedCounselor(studentRes.data.counselorUsername);
-      }
+      const response = await api.get(`/analytics/student/${id}`);
+      setData(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load student profile');
     } finally {
@@ -124,32 +94,6 @@ export default function StudentProfile() {
       await fetchStudentAnalytics();
     }
     setGenerating(false);
-  };
-
-  const handleAllocateClick = () => {
-    if (!data?.student) return;
-    if (data.student.counselorUsername && data.student.counselorUsername !== selectedCounselor) {
-      setIsReallocateDialogOpen(true);
-    } else {
-      confirmAllocateCounselor();
-    }
-  };
-
-  const confirmAllocateCounselor = async () => {
-    if (!data?.student) return;
-    setUpdatingCounselor(true);
-    setToastMsg('');
-    setIsReallocateDialogOpen(false);
-    try {
-      await api.patch(`/students/${id}/counselor?counselorUsername=${encodeURIComponent(selectedCounselor)}`);
-      await fetchStudentAnalytics();
-      setToastMsg(selectedCounselor ? 'Counselor allocated successfully!' : 'Counselor unallocated successfully!');
-    } catch (err: any) {
-      console.error('Failed to allocate counselor', err);
-      setToastMsg(err.response?.data?.message || 'Failed to allocate counselor.');
-    } finally {
-      setUpdatingCounselor(false);
-    }
   };
 
   const handlePostIntervention = async (e: React.FormEvent) => {
@@ -204,7 +148,7 @@ export default function StudentProfile() {
           </button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex flex-wrap items-center gap-2 sm:gap-3">
-              {student.firstName} {student.lastName}
+              {anonymize ? `STUDENT_ST-${student.id}` : `${student.firstName} ${student.lastName}`}
               {latestRecord && (
                 <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase shadow-sm
                   ${latestRecord.riskCategory === 'HIGH' ? 'bg-red-100 text-red-700 border border-red-200' : 
@@ -245,7 +189,9 @@ export default function StudentProfile() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2 mb-1">
                   <Mail className="h-4 w-4" /> Email
                 </p>
-                <p className="text-sm font-medium text-gray-900">{student.email}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {anonymize ? `student_${student.id}@school.edu` : student.email}
+                </p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2 mb-1">
@@ -253,53 +199,6 @@ export default function StudentProfile() {
                 </p>
                 <p className="text-sm font-medium text-gray-900">{student.enrollmentDate}</p>
               </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2 mb-1">
-                  <User className="h-4 w-4" /> Assigned Counselor
-                </p>
-                <p className="text-sm font-semibold text-purple-700 capitalize">
-                  {student.counselorUsername ? student.counselorUsername : 'Unassigned'}
-                </p>
-              </div>
-
-              {user?.role === 'admin' && (
-                <div className="pt-4 border-t border-gray-100 space-y-3">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Allocate Counselor Advisor
-                  </p>
-                  <FormControl fullWidth size="small">
-                    <Select
-                      value={selectedCounselor}
-                      onChange={(e) => setSelectedCounselor(e.target.value)}
-                      displayEmpty
-                      className="rounded-xl bg-gray-50/50"
-                      sx={{ borderRadius: '12px', fontSize: '13px' }}
-                    >
-                      <MenuItem value="" sx={{ fontSize: '13px' }}><em>Unassigned</em></MenuItem>
-                      {counselors.map((c) => (
-                        <MenuItem key={c.id} value={c.username} sx={{ fontSize: '13px' }}>
-                          {c.username} ({c.email})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Button
-                    onClick={handleAllocateClick}
-                    disabled={updatingCounselor}
-                    variant="contained"
-                    fullWidth
-                    className="!bg-purple-600 hover:!bg-purple-700 !text-white !rounded-xl !py-2 !text-xs !font-bold !shadow-none !capitalize"
-                  >
-                    {updatingCounselor ? 'Allocating...' : 'Allocate Counselor'}
-                  </Button>
-                  {toastMsg && (
-                    <p className={`text-xs text-center font-semibold mt-1 ${toastMsg.includes('successful') ? 'text-green-600' : 'text-red-600'}`}>
-                      {toastMsg}
-                    </p>
-                  )}
-                </div>
-              )}
               
               <div className="pt-5 border-t border-gray-100">
                 <button
@@ -473,7 +372,7 @@ export default function StudentProfile() {
         <DialogTitle className="!font-bold !text-xl !pb-2">Delete Student Record</DialogTitle>
         <DialogContent className="!space-y-2 !pt-0">
           <p className="text-sm text-gray-600">
-            Are you sure you want to delete <strong>{student.firstName} {student.lastName}</strong>? This action is permanent and cannot be undone.
+            Are you sure you want to delete <strong>{anonymize ? `STUDENT_ST-${student.id}` : `${student.firstName} ${student.lastName}`}</strong>? This action is permanent and cannot be undone.
           </p>
         </DialogContent>
         <DialogActions className="!px-6 !pb-4 !pt-2">
@@ -491,44 +390,6 @@ export default function StudentProfile() {
             disabled={deleting}
           >
             {deleting ? 'Deleting...' : 'Delete Student'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Reallocate Counselor Confirmation Dialog */}
-      <Dialog
-        open={isReallocateDialogOpen}
-        onClose={() => setIsReallocateDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{
-          paper: {
-            className: '!rounded-2xl !p-2'
-          }
-        }}
-      >
-        <DialogTitle className="!font-bold !text-xl !pb-2">Reallocate Counselor</DialogTitle>
-        <DialogContent className="!space-y-2 !pt-0">
-          <p className="text-sm text-gray-650">
-            This student is already allocated to counselor <strong>{student.counselorUsername}</strong>. 
-            Are you sure you want to reallocate them to counselor <strong>{selectedCounselor || 'Unassigned'}</strong>?
-          </p>
-        </DialogContent>
-        <DialogActions className="!px-6 !pb-4 !pt-2">
-          <Button 
-            onClick={() => setIsReallocateDialogOpen(false)} 
-            className="!text-gray-500 !rounded-xl"
-            disabled={updatingCounselor}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={confirmAllocateCounselor} 
-            variant="contained" 
-            className="!bg-purple-600 hover:!bg-purple-700 !text-white !rounded-xl !px-6"
-            disabled={updatingCounselor}
-          >
-            {updatingCounselor ? 'Allocating...' : 'Confirm Reallocation'}
           </Button>
         </DialogActions>
       </Dialog>

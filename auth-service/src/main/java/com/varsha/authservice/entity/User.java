@@ -25,12 +25,4 @@ public class User {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
     private Role role;
-
-    private String branch;
-
-    @Column(length = 1000)
-    private String subjects;
-
-    @Column(columnDefinition = "boolean default false")
-    private Boolean isHod = false;
 }

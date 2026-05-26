@@ -1,36 +1,9 @@
 import { useReportStore } from '../../features/reports/reportStore';
 import { FileText, FileSpreadsheet, Download, ShieldAlert } from 'lucide-react';
 import { CircularProgress } from '@mui/material';
-import { useAuthStore } from '../../features/auth/authStore';
-import { getTeacherClassAssignment } from '../../lib/roleSecurity';
-import { normalizeRole } from '../../lib/roles';
 
 export default function Reports() {
   const { isGenerating, downloadWatchlistPdf, downloadWatchlistExcel } = useReportStore();
-  const user = useAuthStore((state) => state.user);
-  const role = normalizeRole(user?.role);
-
-  const handlePdfDownload = () => {
-    if (role === 'teacher') {
-      const tc = getTeacherClassAssignment(user?.username);
-      downloadWatchlistPdf(tc.branch, [tc.section]);
-    } else if (role === 'counselor') {
-      downloadWatchlistPdf(undefined, undefined, user?.username);
-    } else {
-      downloadWatchlistPdf();
-    }
-  };
-
-  const handleExcelDownload = () => {
-    if (role === 'teacher') {
-      const tc = getTeacherClassAssignment(user?.username);
-      downloadWatchlistExcel(tc.branch, [tc.section]);
-    } else if (role === 'counselor') {
-      downloadWatchlistExcel(undefined, undefined, user?.username);
-    } else {
-      downloadWatchlistExcel();
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -60,7 +33,7 @@ export default function Reports() {
           </div>
           
           <button
-            onClick={handlePdfDownload}
+            onClick={downloadWatchlistPdf}
             disabled={isGenerating}
             className="mt-8 w-full inline-flex items-center justify-center px-5 py-3 border border-transparent shadow-sm text-sm font-bold rounded-2xl text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 transition-all duration-200 hover:-translate-y-0.5"
           >
@@ -88,7 +61,7 @@ export default function Reports() {
           </div>
           
           <button
-            onClick={handleExcelDownload}
+            onClick={downloadWatchlistExcel}
             disabled={isGenerating}
             className="mt-8 w-full inline-flex items-center justify-center px-5 py-3 border border-purple-200 shadow-sm text-sm font-bold rounded-2xl text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 transition-all duration-200 hover:-translate-y-0.5"
           >

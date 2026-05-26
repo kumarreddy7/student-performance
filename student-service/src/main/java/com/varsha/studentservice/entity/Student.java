@@ -27,10 +27,7 @@ public class Student {
 
     private String className;
     private String section;
-    private String branch;
     private String phoneNumber;
-    
-    private String counselorUsername;
     
     // Status can be Active, Inactive, Deleted
     private String status = "Active";

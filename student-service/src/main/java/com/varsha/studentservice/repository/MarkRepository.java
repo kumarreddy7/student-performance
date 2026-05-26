@@ -11,4 +11,7 @@ public interface MarkRepository extends JpaRepository<Mark, Long> {
     List<Mark> findByStudentId(Long studentId);
     Optional<Mark> findByStudentIdAndSubject(Long studentId, String subject);
     void deleteByStudentId(Long studentId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT AVG(m.marks) FROM Mark m WHERE LOWER(m.subject) = LOWER(:subject)")
+    Double findAverageMarksBySubject(String subject);
 }

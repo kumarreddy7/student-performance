@@ -26,6 +26,4 @@ public class Attendance {
 
     @Column(nullable = false)
     private String status; // "PRESENT", "ABSENT"
-
-    private String markedBy;
 }
