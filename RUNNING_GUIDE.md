@@ -128,6 +128,72 @@ If you prefer running services manually one by one (or inside an IDE like Intell
 
 ---
 
+## 🎯 Step-by-Step Walkthrough: Testing Every Functionality
+
+Once everything is running, follow this guided flow to explore and test every single core feature of the platform:
+
+### 🔐 Phase 1: User Registration & Sign In
+1. Go to `http://localhost:5173/register` in your browser.
+2. Register an **Admin** user:
+   - **Username:** `admin_demo`
+   - **Email:** `admin@demo.com`
+   - **Role:** Select `Admin` from the dropdown list.
+   - **Password:** `123456`
+3. Click **Register**. You will be redirected to the Login page.
+4. Log in using your newly created admin credentials.
+
+---
+
+### 📂 Phase 2: Bulk CSV Ingestion & Cleansing
+1. Once logged in, click on **CSV Management** in the left sidebar.
+2. Select or drag-and-drop the pre-provided **`dummy_students.csv`** file located in the root of the project.
+3. Click **Upload and Ingest**.
+4. The backend's `DataCleansingService` will synchronously process the records, clean up duplicate or invalid entries, apply default mappings, and save them in PostgreSQL and MongoDB!
+5. You will see a success toast and the status update showing the uploaded record count.
+
+---
+
+### 📊 Phase 3: Exploring the Admin / Teacher Dashboard
+1. Click on **Dashboard** in the sidebar.
+2. You will be greeted with a dynamic, real-time workspace featuring:
+   - **Metrics Bar:** Overall active students, average cohort attendance, midterm averages, and percentage of predicted at-risk students.
+   - **Prediction Analytics Chart:** Interactive visual correlation between student study hours and academic scores.
+   - **Assignment Trend Chart:** Cohort-wide assignment marks progression.
+   - **Live Pulse Ticker:** A live feed displaying recent risk assessments and audit logs.
+
+---
+
+### 🔍 Phase 4: Cohort Directory & AI Risk Predictor
+1. Navigate to the **Students** tab in the sidebar.
+2. You will see the entire cohort list populated from the CSV!
+3. Observe the **Risk Prediction Badge** for each student:
+   - 🔴 **High Risk**
+   - 🟡 **Medium Risk**
+   - 🟢 **Low Risk**
+   - *These are calculated dynamically by the Linear Regression Engine based on academic records, study hours, and attendance trends!*
+4. Click on any student (e.g., *John Doe*).
+5. Explore the **Student Profile** workspace:
+   - In-depth attendance trackers, homework performance breakdown, and a predicted score trajectory using the machine learning regression line!
+
+---
+
+### 🏆 Phase 5: Cohort rankings & Leaderboards
+1. Click on **Rankings** in the sidebar.
+2. This displays a gamified academic ranking leaderboard.
+3. The rankings are calculated dynamically based on attendance and assignment averages to promote positive reinforcement and allow teachers to see top performers at a glance.
+
+---
+
+### 🖨️ Phase 6: Generating Admin Reports
+1. Click on **Reports** in the sidebar.
+2. Choose a cohort report type:
+   - High Risk Anomaly Report
+   - Attendance Droppers Report
+   - Grade Cohort Averages
+3. Review the analytics breakdown and download raw exports for university/school files!
+
+---
+
 ## 🛑 How to Stop the Services
 
 ### On Windows
